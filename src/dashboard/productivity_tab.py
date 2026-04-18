@@ -367,19 +367,23 @@ def _render_company_subtab(sector_id: str, dates: list[str]) -> None:
     )
 
     if compare_names:
+        import pandas as _pd
         trend = (
             wdf[wdf["company_name"].isin(compare_names)]
             .groupby(["date", "company_name"])
             .agg(avg_ewi=("ewi", "mean"))
             .reset_index()
         )
+        # YYYYMMDD 문자열 → datetime (Plotly 숫자 포맷 방지)
+        trend["date"] = _pd.to_datetime(trend["date"].astype(str), format="%Y%m%d", errors="coerce")
         fig2 = px.line(
             trend, x="date", y="avg_ewi", color="company_name",
             markers=True,
         )
         fig2.update_layout(
             **PLOTLY_DARK, height=360,
-            xaxis=dict(tickangle=-45, gridcolor=COLORS["grid"]),
+            xaxis=dict(tickangle=-45, gridcolor=COLORS["grid"],
+                       tickformat="%m/%d"),
             yaxis=dict(title="평균 EWI", range=[0, 1], gridcolor=COLORS["grid"]),
             legend={**PLOTLY_LEGEND, "orientation": "h",
                     "yanchor": "bottom", "y": -0.3,
