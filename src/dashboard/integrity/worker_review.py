@@ -309,13 +309,23 @@ def _render_worker_detail(sector_id: str) -> None:
         _render_physical_validation(sector_id, user_jdf)
 
 def _render_worker_kpi(user_jdf: pd.DataFrame, user_info) -> None:
-    """선택된 작업자의 KPI 요약."""
+    """선택된 작업자의 KPI 요약.
+
+    journey.parquet 없는 Cloud 환경에서도 안전하게 동작하도록
+    컬럼 존재 여부를 확인하고 없으면 0으로 처리.
+    """
+    def _col_sum(col: str, default=0) -> int:
+        return int(user_jdf[col].sum()) if col in user_jdf.columns else default
+
+    def _col_inv_sum(col: str, default=0) -> int:
+        return int((~user_jdf[col]).sum()) if col in user_jdf.columns else default
+
     n_total    = len(user_jdf)
-    n_gap      = int(user_jdf["is_gap_filled"].sum())
-    n_low_conf = int(user_jdf["is_low_confidence"].sum())
-    n_invalid  = int((~user_jdf["is_valid_transition"]).sum())
-    n_zero     = int((user_jdf["signal_count"] == 0).sum())
-    n_transit  = int(user_jdf["is_transition"].sum())
+    n_gap      = _col_sum("is_gap_filled")
+    n_low_conf = _col_sum("is_low_confidence")
+    n_invalid  = _col_inv_sum("is_valid_transition")
+    n_zero     = int((user_jdf["signal_count"] == 0).sum()) if "signal_count" in user_jdf.columns else 0
+    n_transit  = _col_sum("is_transition")
 
     gap_pct   = n_gap / n_total * 100 if n_total > 0 else 0
     lowc_pct  = n_low_conf / n_total * 100 if n_total > 0 else 0
