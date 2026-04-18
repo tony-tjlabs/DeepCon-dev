@@ -290,6 +290,13 @@ def _render_worker_detail(sector_id: str) -> None:
     _render_worker_kpi(user_jdf, user_info)
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
+    # slim 여부 판단 — Cloud에서 journey_slim 사용 시 signal_count 등 없음
+    _is_slim = not user_jdf.empty and "signal_count" not in user_jdf.columns
+    _SLIM_NOTE = (
+        "☁️ **Cloud 환경 — 슬림 데이터** · 이 탭은 전체 `journey.parquet`가 필요합니다.  \n"
+        "신호 품질·보정 상세는 로컬 환경 또는 전체 데이터 다운로드 후 확인 가능합니다."
+    )
+
     # ── 6) 탭 (근거-쌓기 순서: Raw → 신호품질 → 비교 → 보정 → 맵 → 물리검증) ──
     tab_access, tab_raw, tab_signal, tab_compare, tab_journey, tab_map, tab_phys = st.tabs([
         "📋 출입기록 (타각기)",
@@ -305,25 +312,35 @@ def _render_worker_detail(sector_id: str) -> None:
         _render_access_record(user_access, user_info)
 
     with tab_raw:
-        _render_raw_ble(user_tward, date_str, access_total_min, locus_meta, user_jdf,
-                        place_ltype_map=place_ltype_map,
-                        raw_dir=raw_dir, user_no=selected_user_no)
+        if _is_slim:
+            st.info(_SLIM_NOTE)
+        else:
+            _render_raw_ble(user_tward, date_str, access_total_min, locus_meta, user_jdf,
+                            place_ltype_map=place_ltype_map,
+                            raw_dir=raw_dir, user_no=selected_user_no)
 
     with tab_signal:
         if user_jdf.empty:
             st.info("신호 품질 데이터가 없습니다.")
+        elif _is_slim:
+            st.info(_SLIM_NOTE)
         else:
             _render_signal_quality(user_jdf)
 
     with tab_compare:
-        _render_journey_comparison(user_tward, user_jdf, access_total_min,
-                                   place_ltype_map=place_ltype_map,
-                                   locus_meta=locus_meta,
-                                   user_access=user_access)
+        if _is_slim:
+            st.info(_SLIM_NOTE)
+        else:
+            _render_journey_comparison(user_tward, user_jdf, access_total_min,
+                                       place_ltype_map=place_ltype_map,
+                                       locus_meta=locus_meta,
+                                       user_access=user_access)
 
     with tab_journey:
         if user_jdf.empty:
             st.info("보정된 journey 데이터가 없습니다.")
+        elif _is_slim:
+            st.info(_SLIM_NOTE)
         else:
             _render_corrected_journey(user_jdf, access_total_min=access_total_min,
                                       user_info=user_info)
@@ -430,7 +447,13 @@ def _render_access_record(user_access: pd.DataFrame, user_info) -> None:
     st.markdown(section_header("출입기록 (타각기 원본)"), unsafe_allow_html=True)
 
     if user_access.empty:
-        st.info("해당 날짜의 AccessLog 파일에 출입 기록이 없습니다. (날짜 범위 파일이 없거나 미출입)")
+        if cfg.CLOUD_MODE:
+            st.info(
+                "☁️ Cloud 환경에서는 타각기 원본 데이터(AccessLog CSV)가 제공되지 않습니다.  \n"
+                "출입 시간은 worker.parquet의 **체류 시간(work_minutes)** 으로 대체 집계됩니다."
+            )
+        else:
+            st.info("해당 날짜의 AccessLog 파일에 출입 기록이 없습니다. (날짜 범위 파일이 없거나 미출입)")
         return
 
     n_rec = len(user_access)
