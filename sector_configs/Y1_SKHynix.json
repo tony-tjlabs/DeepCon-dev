@@ -1,0 +1,51 @@
+{
+  "_comment": "Sector = 서비스 공간 단위. primary_domain은 파서 결정, active_packs는 지표/토큰 범위 결정",
+  "sector_id": "Y1_SKHynix",
+  "sector_name": "SK하이닉스 Y1 건설현장",
+  "sector_type": "construction_site",
+
+  "domain": {
+    "primary": "construction",
+    "active_packs": ["construction"],
+    "_note": "건설현장은 단일 도메인. 향후 현장 내 편의시설(식당/편의점) 추가 시 'retail' pack 추가 가능"
+  },
+
+  "data": {
+    "raw_dir": "data/raw/Y1_SKHynix",
+    "processed_dir": "data/processed/Y1_SKHynix",
+    "spatial_model_dir": "data/spatial_model/Y1_SKHynix",
+    "cache_dir": "data/cache/Y1_SKHynix"
+  },
+
+  "ingestion": {
+    "parser": "construction.TwardParser",
+    "raw_format": "tward_v1",
+    "time_resolution_sec": 60,
+    "entity_type": "PERSON_FIXED",
+    "nfc_normalize": true
+  },
+
+  "spatial": {
+    "sector_code": "SEC-00022",
+    "coordinate_origin": "top_left",
+    "use_spatial_model": true
+  },
+
+  "metrics": {
+    "core": ["dc", "ast"],
+    "from_packs": {
+      "construction": ["ewi", "cre", "sii", "shift_detection"]
+    },
+    "ewi_high_threshold": 0.6,
+    "ewi_low_threshold": 0.2,
+    "cre_high_risk": 0.6,
+    "cre_caution": 0.3,
+    "work_hours": {"start": "07:00", "end": "19:00"}
+  },
+
+  "model": {
+    "core_vocab": "data/shared/vocabulary/core_tokens.json",
+    "pack_vocabs": ["domain_packs/construction/tokens.json"],
+    "core_weights": "data/shared/model_weights/deep_space_latest.pt"
+  }
+}

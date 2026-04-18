@@ -1,0 +1,52 @@
+# === Secrets / credentials (NEVER commit) ===
+.env
+.env.*
+!.env.example
+secrets_for_streamlit.toml
+.streamlit/secrets.toml
+token.json
+client_secret*.json
+service_account*.json
+drive_config.json
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# === OS / IDE ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# === Runtime artifacts ===
+logs/
+output/
+*.log
+*.bak
+*.bak.gz
+_migrated_*
+
+# === Audit (generated at runtime) ===
+data/audit/*.jsonl
+data/audit/*.jsonl.gz
+
+# === Large data (not in git — fetched via Google Drive in CLOUD_MODE) ===
+# Streamlit Cloud 소스 코드 1 GB 제한 → 데이터는 Drive에서 런타임 로드
+# 로컬에서는 drive_storage.py 를 통해 자동 동기화
+data/raw/
+data/processed/
+data/index/
+data/model/
+data/deep_space/
+data/audit/
+
+# spatial_model 은 locus CSV 등 좌표 파일 포함 → Drive에서 로드
+data/spatial_model/

@@ -1,0 +1,53 @@
+{
+  "sector_id": "ICN_Airport_T2",
+  "sector_name": "인천공항 T2 3F 출발장",
+  "sector_type": "airport_terminal",
+
+  "domain": {
+    "primary": "airport",
+    "active_packs": ["airport", "retail"],
+    "_note": "공항 터미널은 복합 도메인. 출국장/게이트는 airport, 면세점/식음료는 retail. primary는 파서 결정에만 사용"
+  },
+
+  "data": {
+    "raw_dir": "data/raw/ICN_Airport_T2",
+    "processed_dir": "data/processed/ICN_Airport_T2",
+    "spatial_model_dir": "data/spatial_model/ICN_Airport_T2",
+    "cache_dir": "data/cache/ICN_Airport_T2"
+  },
+
+  "ingestion": {
+    "parser": "airport.BLEMacParser",
+    "raw_format": "ble_flow_v1",
+    "time_resolution_sec": 10,
+    "entity_type": "PERSON_RANDOM",
+    "rssi_threshold": {"iphone": -75, "android": -85}
+  },
+
+  "spatial": {
+    "sector_code": null,
+    "coordinate_origin": "top_left",
+    "use_spatial_model": false,
+    "zone_count": 19,
+    "sward_count": 183
+  },
+
+  "metrics": {
+    "core": ["dc", "ast", "udc", "nfi"],
+    "from_packs": {
+      "airport": ["congestion_index", "flow_through_ratio", "stagnation_index", "bottleneck_risk"],
+      "retail": ["dwell_pattern", "hot_zone"]
+    },
+    "analysis_mode": "space_centric",
+    "operating_hours": {"start": "05:00", "end": "23:59"}
+  },
+
+  "model": {
+    "core_vocab": "data/shared/vocabulary/core_tokens.json",
+    "pack_vocabs": [
+      "domain_packs/airport/tokens.json",
+      "domain_packs/retail/tokens.json"
+    ],
+    "core_weights": "data/shared/model_weights/deep_space_latest.pt"
+  }
+}

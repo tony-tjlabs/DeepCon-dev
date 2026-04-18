@@ -1,0 +1,47 @@
+{
+  "sector_id": "LotteMart_Singal",
+  "sector_name": "롯데마트 신갈점",
+  "sector_type": "retail_store",
+
+  "domain": {
+    "primary": "retail",
+    "active_packs": ["retail"],
+    "_note": "대형 마트는 단일 retail 도메인. 향후 마트 내 food court 분석 시 'food_service' pack 추가 가능"
+  },
+
+  "data": {
+    "raw_dir": "data/raw/LotteMart_Singal",
+    "processed_dir": "data/processed/LotteMart_Singal",
+    "spatial_model_dir": "data/spatial_model/LotteMart_Singal",
+    "cache_dir": "data/cache/LotteMart_Singal"
+  },
+
+  "ingestion": {
+    "parser": "retail.BLEFlowParser",
+    "raw_format": "ble_flow_v1",
+    "time_resolution_sec": 10,
+    "entity_type": "PERSON_RANDOM",
+    "rssi_threshold": {"iphone": -75, "android": -85}
+  },
+
+  "spatial": {
+    "sector_code": null,
+    "coordinate_origin": "top_left",
+    "use_spatial_model": false
+  },
+
+  "metrics": {
+    "core": ["dc", "ast", "udc", "avc", "nfi"],
+    "from_packs": {
+      "retail": ["conversion_rate", "dwell_pattern", "hot_zone"]
+    },
+    "analysis_mode": "space_centric",
+    "operating_hours": {"start": "10:00", "end": "22:00"}
+  },
+
+  "model": {
+    "core_vocab": "data/shared/vocabulary/core_tokens.json",
+    "pack_vocabs": ["domain_packs/retail/tokens.json"],
+    "core_weights": "data/shared/model_weights/deep_space_latest.pt"
+  }
+}

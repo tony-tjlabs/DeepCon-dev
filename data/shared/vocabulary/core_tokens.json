@@ -1,0 +1,104 @@
+{
+  "_meta": {
+    "version": "2.0",
+    "token_count": 41,
+    "updated": "2026-03-19",
+    "description": "Apollo Core Token Vocabulary — 모든 도메인/Sector 공유",
+    "principle": "Core에 추가하려면 최소 2개 이상의 도메인에서 공통 출현해야 한다"
+  },
+
+  "groups": {
+    "GATE": {
+      "description": "출입 통제 지점",
+      "tokens": {
+        "main_gate": { "id": "GT-001", "description_kr": "주 출입구 — 인원·차량 주 통제", "description_en": "Primary entry/exit control point for personnel and vehicles" },
+        "sub_gate": { "id": "GT-002", "description_kr": "보조 출입구", "description_en": "Secondary entry/exit point" },
+        "timeclock": { "id": "GT-003", "description_kr": "출퇴근 기록 지점 — 공식 Shift 시작/종료 앵커", "description_en": "Time-recording point — official shift start/end anchor" },
+        "security_checkpoint": { "id": "GT-004", "description_kr": "보안 검색 지점", "description_en": "Security screening and access control point" },
+        "customs": { "id": "GT-005", "description_kr": "세관·입출국 심사", "description_en": "Customs and immigration processing point" }
+      }
+    },
+    "WORK": {
+      "description": "작업/생산 공간",
+      "tokens": {
+        "work_zone": { "id": "WK-001", "description_kr": "일반 작업구역 — 해당 시설의 핵심 작업 공간", "description_en": "General work area — primary productive space of the facility" },
+        "confined_space": { "id": "WK-002", "description_kr": "밀폐공간 — 산소 결핍·가스 위험, 2인 이상 필수", "description_en": "Confined space — oxygen/gas hazard, minimum 2 persons required" },
+        "high_voltage": { "id": "WK-003", "description_kr": "고압전기 구역 — 감전 위험", "description_en": "High-voltage area — electrocution risk" },
+        "outdoor_work": { "id": "WK-004", "description_kr": "야외 작업구역", "description_en": "Outdoor work area exposed to weather" },
+        "mechanical_room": { "id": "WK-005", "description_kr": "기계·설비실", "description_en": "Mechanical/equipment room" },
+        "production_line": { "id": "WK-006", "description_kr": "생산 라인 — 제조 공정", "description_en": "Manufacturing/assembly production line" },
+        "cleanroom": { "id": "WK-007", "description_kr": "클린룸 — 고도 청정 환경", "description_en": "Cleanroom — controlled contamination environment" },
+        "loading_dock": { "id": "WK-008", "description_kr": "상하역 도크 — 물자 입출고", "description_en": "Loading/unloading dock for goods movement" },
+        "lab": { "id": "WK-009", "description_kr": "실험실·연구공간", "description_en": "Laboratory or research workspace" },
+        "server_room": { "id": "WK-010", "description_kr": "서버·데이터 공간", "description_en": "Server room or data center space" }
+      }
+    },
+    "TRANSIT": {
+      "description": "이동 경로 — Journey 연결 공간",
+      "tokens": {
+        "lobby": { "id": "TR-001", "description_kr": "로비·홀 — 건물 주 진입 공간", "description_en": "Lobby or entrance hall — primary building entry space" },
+        "corridor": { "id": "TR-002", "description_kr": "복도·통로 — 수평 이동 경로", "description_en": "Corridor or walkway — horizontal movement path" },
+        "elevator": { "id": "TR-003", "description_kr": "엘리베이터 — 수직 이동", "description_en": "Elevator — vertical transit between floors" },
+        "escalator": { "id": "TR-004", "description_kr": "에스컬레이터·무빙워크 — 경사 이동", "description_en": "Escalator or moving walkway" },
+        "staircase": { "id": "TR-005", "description_kr": "계단 — 수직 이동 (도보)", "description_en": "Staircase — vertical transit on foot" }
+      }
+    },
+    "REST": {
+      "description": "휴식·식음 공간",
+      "tokens": {
+        "breakroom": { "id": "RS-001", "description_kr": "휴게실 — 비공식 휴식 공간", "description_en": "Break room — informal rest space for personnel" },
+        "smoking_area": { "id": "RS-002", "description_kr": "흡연구역", "description_en": "Designated smoking area" },
+        "dining_hall": { "id": "RS-003", "description_kr": "구내식당·식당", "description_en": "Cafeteria or dining facility" },
+        "waiting_area": { "id": "RS-004", "description_kr": "대기 공간", "description_en": "Waiting area for personnel or visitors" },
+        "lounge": { "id": "RS-005", "description_kr": "라운지 — 고품질 휴게 공간", "description_en": "Lounge — premium rest or hospitality space" },
+        "restroom": { "id": "RS-006", "description_kr": "화장실·세면실", "description_en": "Restroom or washroom facility" }
+      }
+    },
+    "SERVICE": {
+      "description": "서비스 지점 — 리테일/병원/오피스 공통",
+      "tokens": {
+        "checkout": { "id": "SV-001", "description_kr": "계산·결제 지점", "description_en": "Checkout or payment processing point" },
+        "reception": { "id": "SV-002", "description_kr": "안내·접수 데스크", "description_en": "Reception or information desk" },
+        "customer_service": { "id": "SV-003", "description_kr": "고객 서비스 센터", "description_en": "Customer service or support center" },
+        "stockroom": { "id": "SV-004", "description_kr": "창고·재고 공간", "description_en": "Storage or inventory space" },
+        "fitting_room": { "id": "SV-005", "description_kr": "탈의실", "description_en": "Fitting room or changing room" },
+        "store_floor": { "id": "SV-006", "description_kr": "매장 판매 공간", "description_en": "Retail sales floor or display area" }
+      }
+    },
+    "TRANSPORT": {
+      "description": "교통 시설",
+      "tokens": {
+        "boarding_gate": { "id": "TP-001", "description_kr": "탑승 게이트", "description_en": "Boarding gate for aircraft, vessel, or transit" },
+        "baggage_claim": { "id": "TP-002", "description_kr": "수하물 찾는 곳", "description_en": "Baggage claim or luggage pickup area" },
+        "platform": { "id": "TP-003", "description_kr": "플랫폼·승강장", "description_en": "Transit platform for train, subway, or bus" },
+        "parking_lot": { "id": "TP-004", "description_kr": "주차장 (야외·평면)", "description_en": "Outdoor or ground-level parking area" },
+        "parking_garage": { "id": "TP-005", "description_kr": "주차 건물 (다층)", "description_en": "Multi-level parking structure" }
+      }
+    },
+    "ADMIN": {
+      "description": "행정·사무 공간",
+      "tokens": {
+        "office": { "id": "AD-001", "description_kr": "사무실", "description_en": "Office workspace for administrative work" },
+        "conference_room": { "id": "AD-002", "description_kr": "회의실", "description_en": "Meeting or conference room" }
+      }
+    },
+    "OUTDOOR": {
+      "description": "야외 개방 공간",
+      "tokens": {
+        "plaza": { "id": "OD-001", "description_kr": "광장·야외 공개 공간", "description_en": "Open plaza or outdoor public space" },
+        "atrium": { "id": "OD-002", "description_kr": "아트리움·내부 오픈 스페이스", "description_en": "Atrium or interior open space" }
+      }
+    }
+  },
+
+  "total": 41,
+
+  "domain_pack_reserved": {
+    "_comment": "아래 토큰은 Core 미포함 — Domain Pack에서 확장",
+    "hospital_pack": ["ward", "examination_room", "pharmacy", "nurse_station"],
+    "factory_pack": ["quality_check", "staging_area", "pick_zone"],
+    "mall_pack": ["food_court", "anchor_store", "kiosk_zone"],
+    "logistics_pack": ["dock_door", "pick_zone", "staging_area"],
+    "transit_pack": ["airlock", "vestibule", "transfer_corridor"]
+  }
+}

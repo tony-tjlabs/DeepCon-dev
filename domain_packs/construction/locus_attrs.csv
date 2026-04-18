@@ -1,0 +1,59 @@
+locus_id,locus_name,locus_type,hazard_level,hazard_grade,confined_space,height_risk,minimum_crew,work_permit_required,dwell_category
+L-Y1-001,본진 타각기 입구,GATE,low,2.0,False,False,1,False,TRANSIT
+L-Y1-002,본진 타각기 출구,GATE,low,2.0,False,False,1,False,TRANSIT
+L-Y1-003,GATE #1,GATE,low,2.0,False,False,1,False,TRANSIT
+L-Y1-004,GATE #2 서측 공동구,GATE,low,2.0,False,False,1,False,TRANSIT
+L-Y1-005,GATE #4,GATE,low,2.0,False,False,1,False,TRANSIT
+L-Y1-006,지원 타각기 입구,GATE,low,2.0,False,False,1,False,TRANSIT
+L-Y1-007,지원 타각기 출구,GATE,low,2.0,False,False,1,False,TRANSIT
+L-Y1-020,FAB 1F 작업구역,WORK,medium,3.0,False,True,1,False,LONG_STAY
+L-Y1-021,FAB 2F 작업구역,WORK,medium,3.0,False,True,1,False,LONG_STAY
+L-Y1-022,FAB 3F 작업구역,WORK,medium,3.0,False,True,1,False,LONG_STAY
+L-Y1-023,FAB 4F 작업구역,WORK,medium,3.0,False,True,1,False,LONG_STAY
+L-Y1-024,지원 1-3BL,WORK,medium,3.0,False,False,1,False,LONG_STAY
+L-Y1-025,지원 4BL,WORK,medium,3.0,False,False,1,False,LONG_STAY
+L-Y1-026,비상발전기동,WORK,high,4.0,False,False,2,True,LONG_STAY
+L-Y1-027,FAB 5F 작업구역,WORK,medium,3.0,False,True,1,False,LONG_STAY
+L-Y1-028,FAB 6F 작업구역,WORK,medium,3.0,False,True,1,False,LONG_STAY
+L-Y1-029,FAB 호이스트,TRANSPORT,high,4.0,False,True,2,True,TRANSIT
+L-Y1-030,FAB 클라이머,TRANSPORT,high,4.0,False,True,2,True,TRANSIT
+L-Y1-031,FAB 휴게실 1층 1번,REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-032,FAB 휴게실 1층 2번,REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-033,FAB 휴게실 1층 4번,REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-040,CUB 1F 작업구역,WORK,high,4.0,False,False,1,True,LONG_STAY
+L-Y1-041,CUB B1F 작업구역,WORK,high,4.0,False,False,1,True,LONG_STAY
+L-Y1-042,CUB 클라이머,TRANSPORT,high,4.0,False,True,2,True,TRANSIT
+L-Y1-050,WWT B1F 전체,WORK,high,4.0,False,False,1,True,LONG_STAY
+L-Y1-051,WWT 1F 전체,WORK,medium,3.0,False,False,1,False,LONG_STAY
+L-Y1-052,WWT 2F 전체,WORK,medium,3.0,False,False,1,False,LONG_STAY
+L-Y1-054,WWT 2F 휴게실,REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-055,WWT B1F TB08 밀폐,HAZARD,critical,5.0,True,False,2,True,HAZARD_ZONE
+L-Y1-056,WWT B1F TB02 밀폐,HAZARD,critical,5.0,True,False,2,True,HAZARD_ZONE
+L-Y1-057,WWT B1F TB17 밀폐,HAZARD,critical,5.0,True,False,2,True,HAZARD_ZONE
+L-Y1-058,WWT B1F TB16,WORK,high,4.0,False,False,1,True,LONG_STAY
+L-Y1-059,WWT B1F TB15,WORK,high,4.0,False,False,1,True,LONG_STAY
+L-Y1-060,WWT B1F TB11,WORK,high,4.0,False,False,1,True,LONG_STAY
+L-Y1-061,WWT B1F TB09,WORK,high,4.0,False,False,1,True,LONG_STAY
+L-Y1-062,WWT B1F TB07,WORK,high,4.0,False,False,1,True,LONG_STAY
+L-Y1-070,공사현장 (야외),WORK,medium,3.0,False,False,1,False,LONG_STAY
+L-Y1-071,본진 (작업구역),WORK,medium,3.0,False,False,1,False,LONG_STAY
+L-Y1-072,본진사무실,ADMIN,low,2.0,False,False,1,False,ADMIN
+L-Y1-073,안전교육장,FACILITY,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-080,154kV 1F 전체,HAZARD,critical,5.0,False,False,2,True,HAZARD_ZONE
+L-Y1-081,154kV 목적지,HAZARD,critical,5.0,False,False,2,True,HAZARD_ZONE
+L-Y1-082,저수조,WORK,medium,3.0,False,False,1,False,LONG_STAY
+L-Y1-083,154kV 3F 전체,HAZARD,critical,5.0,False,False,2,True,HAZARD_ZONE
+L-Y1-090,휴게실 (본진 정문 건너),REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-091,흡연장 (타각기 근처),REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-092,흡연장 (본진 B동 건너),REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-093,흡연장 (전진사무실),REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-094,전진 (사무시설),ADMIN,low,2.0,False,False,1,False,ADMIN
+L-Y1-095,휴게실 (전진 사무실 뒷편),REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-096,본진 식당,REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-097,휴게실 (정수장 옆),REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-098,154kV 변전소 휴게실,REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-099,본진 내부 남자 휴게실,REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-100,주차장,REST,low,2.0,False,False,1,False,TRANSIT
+L-Y1-101,전진사무실 목적지,ADMIN,low,2.0,False,False,1,False,ADMIN
+L-Y1-104,BL 야외 휴게실,REST,low,2.0,False,False,1,False,SHORT_STAY
+L-Y1-105,전진사무실 화장실,REST,low,2.0,False,False,1,False,SHORT_STAY
