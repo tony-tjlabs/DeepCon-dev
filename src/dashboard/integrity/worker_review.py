@@ -111,7 +111,7 @@ def _render_worker_detail(sector_id: str) -> None:
     if _cfg.CLOUD_MODE:
         st.info(
             "🖥️ **Raw BLE · 신호 품질 · 보정 Journey 탭은 로컬 전용입니다.**  \n"
-            "`journey.parquet` (2.8 GB/일)은 Cloud 메모리 한도를 초과합니다.  \n"
+            "`journey.parquet`는 파일 ~60 MB이지만 메모리 로드 시 ~2.8 GB로 팽창해 Cloud 한도를 초과합니다.  \n"
             "로컬 환경에서 실행하면 전체 기능을 사용할 수 있습니다."
         )
 
@@ -292,7 +292,7 @@ def _render_worker_detail(sector_id: str) -> None:
     _is_slim = not user_jdf.empty and "signal_count" not in user_jdf.columns
     # Cloud 로컬 전용 안내가 필요한 탭 판단
     _is_cloud = _cfg.CLOUD_MODE
-    _LOCAL_ONLY_NOTE = "🖥️ **로컬 전용 탭** · `journey.parquet` (2.8 GB/일)은 Cloud 메모리 한도를 초과합니다. 로컬 환경에서 실행하면 사용할 수 있습니다."
+    _LOCAL_ONLY_NOTE = "🖥️ **로컬 전용 탭** · `journey.parquet`는 메모리 로드 시 ~2.8 GB로 팽창해 Cloud 한도를 초과합니다. 로컬 환경에서 실행하면 사용할 수 있습니다."
     _SLIM_NOTE = (
         "☁️ **Cloud 환경 — 슬림 데이터** · 이 탭은 전체 `journey.parquet`가 필요합니다.  \n"
         "신호 품질·보정 상세는 로컬 환경 또는 전체 데이터 다운로드 후 확인 가능합니다."
