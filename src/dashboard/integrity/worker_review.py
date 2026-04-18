@@ -247,8 +247,15 @@ def _render_worker_detail(sector_id: str) -> None:
         place_ltype_map = _build_place_ltype_map(str(journey_path), str(locus_csv))
 
     with st.spinner("데이터 로딩 중..."):
-        _jp_mtime = journey_path.stat().st_mtime if journey_path.exists() else 0.0
-        jdf = _load_journey(sector_id, date_str, str(journey_path), _mtime=_jp_mtime) if journey_path.exists() else pd.DataFrame()
+        # journey.parquet 우선, 없으면 slim fallback (Cloud 환경)
+        if journey_path.exists():
+            _jp_mtime = journey_path.stat().st_mtime
+            jdf = _load_journey(sector_id, date_str, str(journey_path), _mtime=_jp_mtime)
+        elif slim_path.exists():
+            _slim_mtime = slim_path.stat().st_mtime
+            jdf = _load_journey(sector_id, date_str, str(slim_path), _mtime=_slim_mtime)
+        else:
+            jdf = pd.DataFrame()
         user_jdf = (
             jdf[jdf["user_no"] == selected_user_no]
             .sort_values("timestamp")
