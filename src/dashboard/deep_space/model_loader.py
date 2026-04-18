@@ -24,19 +24,25 @@ def load_model(sector_id: str):
 
     torch는 이 함수가 호출될 때만 import됨 (lazy).
 
+    ★ OOM 방지: checkpoint 파일 존재 여부를 torch import 이전에 확인.
+      Cloud 환경에는 checkpoint가 없으므로 torch(400-600MB)를 아예 로드하지 않음.
+
     Returns:
         (model, tokenizer) or (None, None)
     """
+    # ── checkpoint 존재 확인 (torch import 전) ─────────────────────
+    model_dir = DEEP_SPACE_DIR / sector_id
+    ckpt_path = model_dir / "checkpoint" / "best_model.pt"
+    tok_path  = model_dir / "tokenizer.json"
+
+    if not ckpt_path.exists():
+        return None, None  # torch import 없이 즉시 반환
+
+    # ── checkpoint가 있을 때만 torch 로드 (Cloud OOM 방지) ──────────
     try:
         from src.model.transformer import DeepSpaceModel
         from src.model.tokenizer import LocusTokenizer
 
-        model_dir = DEEP_SPACE_DIR / sector_id
-        ckpt_path = model_dir / "checkpoint" / "best_model.pt"
-        tok_path = model_dir / "tokenizer.json"
-
-        if not ckpt_path.exists():
-            return None, None
         model = DeepSpaceModel.from_pretrained(str(ckpt_path))
         model.eval()
         tokenizer = LocusTokenizer.load(str(tok_path))
