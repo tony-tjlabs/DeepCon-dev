@@ -12,7 +12,8 @@ anthropic>=0.18.0,<1.0.0
 google-api-python-client>=2.100.0
 google-auth>=2.23.0
 python-dotenv>=1.0.0
-gensim>=4.3.0                   # Journey Word2Vec 임베딩 (Python 3.12 필요)
+# gensim — Cloud 환경에서 제외 (Python 3.14 C-extension 빌드 실패)
+#           Dev 전용 학습은 로컬에서만 실행, Cloud는 사전 학습 pkl만 사용
 scikit-learn>=1.3.0             # K-means 클러스터링 + PCA
 networkx>=3.0                   # Adjacency 그래프 (경로 분석)
 PyYAML>=6.0                     # domain_packs config.yaml 로드

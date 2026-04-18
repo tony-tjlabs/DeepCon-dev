@@ -42,6 +42,17 @@ import config as cfg
 
 logger = logging.getLogger(__name__)
 
+# gensim 가용성 체크 — Cloud 배포 시 미설치 허용
+try:
+    import gensim  # noqa: F401
+    GENSIM_AVAILABLE = True
+except ImportError:
+    GENSIM_AVAILABLE = False
+    logger.warning(
+        "gensim 미설치 — Journey 임베딩 학습/로드 불가. "
+        "Deep Space 탭의 Word2Vec 기능이 비활성화됩니다."
+    )
+
 # ─── 하이퍼파라미터 ────────────────────────────────────────────────
 W2V_DIM        = 64     # 임베딩 차원
 W2V_WINDOW     = 5      # Skip-gram 컨텍스트 창
@@ -381,7 +392,15 @@ class JourneyEmbedder:
         logger.info(f"JourneyEmbedder 저장 완료: {self.model_dir}")
 
     def load(self) -> "JourneyEmbedder":
-        """저장된 모델 로드."""
+        """저장된 모델 로드.
+
+        gensim 미설치 환경(Cloud)에서는 pkl 역직렬화가 불가하므로
+        _is_trained=False 상태로 반환 (Deep Space 탭이 "기능 비활성" 처리).
+        """
+        if not GENSIM_AVAILABLE:
+            logger.warning("gensim 미설치 — W2V 모델 로드 건너뜀 (Cloud 환경)")
+            return self  # _is_trained = False 유지
+
         w2v_path    = self.model_dir / "w2v_model.pkl"
         kmeans_path = self.model_dir / "kmeans_model.pkl"
         labels_path = self.model_dir / "cluster_labels.json"
@@ -389,19 +408,25 @@ class JourneyEmbedder:
         if not w2v_path.exists():
             raise FileNotFoundError(f"W2V 모델 없음: {w2v_path}")
 
-        with open(w2v_path, "rb") as f:
-            self.w2v_model = pickle.load(f)
+        try:
+            with open(w2v_path, "rb") as f:
+                self.w2v_model = pickle.load(f)
 
-        with open(kmeans_path, "rb") as f:
-            self.kmeans = pickle.load(f)
+            with open(kmeans_path, "rb") as f:
+                self.kmeans = pickle.load(f)
 
-        with open(labels_path, encoding="utf-8") as f:
-            raw = json.load(f)
-            # JSON key는 str이므로 int로 변환
-            self.cluster_labels = {int(k): v for k, v in raw.items()}
+            with open(labels_path, encoding="utf-8") as f:
+                raw = json.load(f)
+                # JSON key는 str이므로 int로 변환
+                self.cluster_labels = {int(k): v for k, v in raw.items()}
 
-        self._is_trained = True
-        logger.info(f"JourneyEmbedder 로드 완료: {self.model_dir}")
+            self._is_trained = True
+            logger.info(f"JourneyEmbedder 로드 완료: {self.model_dir}")
+        except Exception as e:
+            logger.warning(f"W2V 모델 로드 실패 (gensim 버전 불일치?): {e}")
+            self.w2v_model = None
+            self._is_trained = False
+
         return self
 
     def is_available(self) -> bool:
@@ -422,11 +447,18 @@ class JourneyEmbedder:
 
 # ─── 편의 함수 ────────────────────────────────────────────────────
 def get_or_load_embedder(sector_id: str) -> JourneyEmbedder | None:
-    """저장된 모델이 있으면 로드, 없으면 None 반환."""
+    """저장된 모델이 있으면 로드, 없으면 None 반환.
+
+    gensim 미설치 시 None 반환 (Cloud 환경 — Deep Space 탭 비활성화용).
+    """
+    if not GENSIM_AVAILABLE:
+        return None
+
     emb = JourneyEmbedder(sector_id)
     if emb.is_available():
         try:
-            return emb.load()
+            loaded = emb.load()
+            return loaded if loaded._is_trained else None
         except Exception as e:
             logger.warning(f"임베더 로드 실패: {e}")
     return None
