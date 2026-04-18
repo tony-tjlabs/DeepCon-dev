@@ -60,7 +60,14 @@ def _render_anomaly_detection(sector_id: str) -> None:
     worker_path  = paths["processed_dir"] / date_str / "worker.parquet"
 
     if not journey_path.exists() or not worker_path.exists():
-        st.error("parquet 파일이 없습니다.")
+        import config as _cfg
+        if _cfg.CLOUD_MODE and not journey_path.exists():
+            st.info(
+                "🖥️ **로컬 전용 탭** · `journey.parquet` (2.8 GB/일)은 Cloud 메모리 한도를 초과합니다.  \n"
+                "로컬 환경에서 실행하면 이상 패턴 감지를 사용할 수 있습니다."
+            )
+        else:
+            st.error("parquet 파일이 없습니다.")
         return
 
     with st.spinner("이상 패턴 감지 중..."):

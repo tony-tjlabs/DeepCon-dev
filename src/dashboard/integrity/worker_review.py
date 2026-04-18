@@ -105,110 +105,16 @@ def _render_worker_detail(sector_id: str) -> None:
 
     import config as _cfg
 
-    # ── journey_slim 온디맨드 다운로드 (정합성 탭 KPI 활성화) ──────────
-    # journey.parquet도 없고 slim도 없을 때, Cloud 환경이면 Drive에서 받아옴
-    if not journey_path.exists() and not slim_path.exists():
-        if _cfg.CLOUD_MODE:
-            with st.spinner(
-                f"☁️ 정합성 데이터 다운로드 중… ({date_str} · 약 10~15초)"
-            ):
-                try:
-                    from src.pipeline.drive_storage import init_drive_storage_from_secrets
-                    _drive = init_drive_storage_from_secrets(sector_id)
-                    if _drive:
-                        _drive.ensure_journey_slim(
-                            sector_id, date_str, _cfg.PROCESSED_DIR
-                        )
-                except Exception as _e:
-                    logger.warning(f"정합성 journey_slim 다운로드 실패: {_e}")
-
-    # ── Cloud: full journey 온디맨드 다운로드 UI ──────────────────────
-    # journey.parquet 없을 때(= slim만 있거나 아무것도 없을 때) 다운로드 배너 표시.
-    # 사용자가 버튼을 눌러야 다운로드 시작 (대용량 파일이므로 자동 X).
-    if not journey_path.exists() and _cfg.CLOUD_MODE:
-        _dl_key = f"_journey_dl_{sector_id}_{date_str}"
-
-        # 진행 중이 아닐 때만 배너 표시
-        if not st.session_state.get(f"{_dl_key}_done"):
-            try:
-                from src.pipeline.drive_storage import init_drive_storage_from_secrets
-                _drive_info = init_drive_storage_from_secrets(sector_id)
-                _file_size_bytes = (
-                    _drive_info.get_drive_file_size(sector_id, date_str, "journey.parquet")
-                    if _drive_info else None
-                )
-            except Exception:
-                _drive_info = None
-                _file_size_bytes = None
-
-            _size_label = (
-                f"{round(_file_size_bytes / 1024 / 1024, 0):.0f} MB"
-                if _file_size_bytes else "알 수 없음"
-            )
-            _est_sec = max(30, round((_file_size_bytes or 30_000_000) / 1_000_000 * 1.2))
-            _est_label = f"약 {_est_sec}초" if _est_sec < 120 else f"약 {_est_sec // 60}분"
-
-            with st.container():
-                st.info(
-                    f"☁️ **전체 데이터({_size_label})를 다운로드하면 "
-                    f"Raw BLE · 신호 품질 · 보정 비교 탭을 모두 사용할 수 있습니다.** "
-                    f"예상 소요 시간: **{_est_label}** · 다운로드 후 자동 새로 고침됩니다.",
-                    icon="📥",
-                )
-
-                _btn_col, _skip_col = st.columns([2, 5])
-                with _btn_col:
-                    _do_download = st.button(
-                        f"📥 전체 데이터 다운로드 ({_size_label})",
-                        key=f"{_dl_key}_btn",
-                        type="primary",
-                        use_container_width=True,
-                    )
-
-                if _do_download and _drive_info:
-                    _status_box = st.status(
-                        f"☁️ journey.parquet 다운로드 중… ({date_str})",
-                        expanded=True,
-                    )
-                    with _status_box:
-                        _prog_bar  = st.progress(0.0)
-                        _prog_text = st.empty()
-
-                        def _on_progress(pct: float, label: str) -> None:
-                            _prog_bar.progress(min(pct, 1.0))
-                            _prog_text.markdown(
-                                f"<span style='color:#9AB5D4;font-size:0.85rem;'>"
-                                f"다운로드 중: **{label}**</span>",
-                                unsafe_allow_html=True,
-                            )
-
-                        try:
-                            _ok, _reason = _drive_info.ensure_journey_full(
-                                sector_id, date_str, _cfg.PROCESSED_DIR,
-                                progress_callback=_on_progress,
-                            )
-                            if _ok:
-                                _prog_bar.progress(1.0)
-                                _prog_text.empty()
-                                _status_box.update(
-                                    label="✅ 다운로드 완료! 데이터를 새로 로드합니다…",
-                                    state="complete",
-                                    expanded=False,
-                                )
-                                st.session_state[f"{_dl_key}_done"] = True
-                                st.rerun()
-                            else:
-                                _status_box.update(
-                                    label=f"❌ 다운로드 실패: {_reason}",
-                                    state="error",
-                                    expanded=True,
-                                )
-                        except Exception as _e:
-                            _status_box.update(
-                                label=f"❌ 오류: {_e}",
-                                state="error",
-                                expanded=True,
-                            )
+    # ── Cloud: journey 로딩 없음 — 로컬 전용 안내 ────────────────────
+    # journey.parquet / slim 모두 Cloud 메모리 한도 초과 (2.8GB / 471MB).
+    # CLOUD_MODE에서는 모든 journey 로딩을 차단하고 로컬 전용 안내만 표시.
+    if _cfg.CLOUD_MODE:
+        st.info(
+            "☁️ **Raw BLE · 신호 품질 · 보정 Journey 탭은 로컬 전용입니다.**  \n"
+            "`journey.parquet` (2.8 GB/일)은 Cloud 메모리 한도를 초과합니다.  \n"
+            "로컬 환경에서 실행하면 전체 기능을 사용할 수 있습니다.",
+            icon="🖥️",
+        )
 
     worker_df = _load_worker(sector_id, date_str, str(worker_path))
     if worker_df.empty:
@@ -337,8 +243,10 @@ def _render_worker_detail(sector_id: str) -> None:
         place_ltype_map = _build_place_ltype_map(str(journey_path), str(locus_csv))
 
     with st.spinner("데이터 로딩 중..."):
-        # journey.parquet 우선, 없으면 slim fallback (Cloud 환경)
-        if journey_path.exists():
+        # CLOUD_MODE: journey 로딩 완전 차단 (2.8GB/471MB → OOM)
+        if _cfg.CLOUD_MODE:
+            jdf = pd.DataFrame()
+        elif journey_path.exists():
             _jp_mtime = journey_path.stat().st_mtime
             jdf = _load_journey(sector_id, date_str, str(journey_path), _mtime=_jp_mtime)
         elif slim_path.exists():
@@ -351,20 +259,7 @@ def _render_worker_detail(sector_id: str) -> None:
             .sort_values("timestamp")
             .reset_index(drop=True)
         ) if not jdf.empty else pd.DataFrame()
-
-        # ★ journey_agg: Cloud 환경에서 journey/slim 없을 때 사전 집계 데이터 로드
-        # (~3.5MB/일, Drive에서 자동 다운로드됨)
-        agg_df = pd.DataFrame()
-        if _cfg.CLOUD_MODE and not journey_path.exists() and not slim_path.exists():
-            if agg_path.exists():
-                try:
-                    agg_df = pd.read_parquet(str(agg_path))
-                except Exception as _e:
-                    logger.warning(f"journey_agg 로드 실패: {_e}")
-        user_agg_df = (
-            agg_df[agg_df["user_no"] == selected_user_no].copy()
-            if not agg_df.empty else pd.DataFrame()
-        )
+        user_agg_df = pd.DataFrame()  # agg-only 모드 비활성 (로컬 전용 안내로 대체)
 
         # locus 메타 조인 (locus_type, building, floor, function, locus_x/y 등)
         if not locus_meta.empty and not user_jdf.empty:
@@ -391,20 +286,17 @@ def _render_worker_detail(sector_id: str) -> None:
         access_total_min = float(user_info.get("work_minutes") or 0)
 
     # ── 5) KPI 카드 ─────────────────────────────────────────────────
-    _render_worker_kpi(user_jdf, user_info, user_agg_df=user_agg_df)
+    _render_worker_kpi(user_jdf, user_info)
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     # slim 여부 판단 — Cloud에서 journey_slim 사용 시 signal_count 등 없음
     _is_slim = not user_jdf.empty and "signal_count" not in user_jdf.columns
-    # agg-only 모드 — Cloud에서 journey/slim 없고 journey_agg만 있을 때
-    _is_agg_only = user_jdf.empty and not user_agg_df.empty
+    # Cloud 로컬 전용 안내가 필요한 탭 판단
+    _is_cloud = _cfg.CLOUD_MODE
+    _LOCAL_ONLY_NOTE = "🖥️ **로컬 전용 탭** · `journey.parquet` (2.8 GB/일)은 Cloud 메모리 한도를 초과합니다. 로컬 환경에서 실행하면 사용할 수 있습니다."
     _SLIM_NOTE = (
         "☁️ **Cloud 환경 — 슬림 데이터** · 이 탭은 전체 `journey.parquet`가 필요합니다.  \n"
         "신호 품질·보정 상세는 로컬 환경 또는 전체 데이터 다운로드 후 확인 가능합니다."
-    )
-    _AGG_NOTE = (
-        "☁️ **Cloud 환경 — 집계 데이터** · 이 탭은 분 단위 `journey.parquet`가 필요합니다.  \n"
-        "전체 `journey.parquet` 다운로드 후 Raw BLE · 신호 품질 · 보정 상세를 확인할 수 있습니다."
     )
 
     # ── 6) 탭 (근거-쌓기 순서: Raw → 신호품질 → 비교 → 보정 → 맵 → 물리검증) ──
@@ -422,8 +314,8 @@ def _render_worker_detail(sector_id: str) -> None:
         _render_access_record(user_access, user_info)
 
     with tab_raw:
-        if _is_agg_only:
-            st.info(_AGG_NOTE)
+        if _is_cloud:
+            st.info(_LOCAL_ONLY_NOTE)
         elif _is_slim:
             st.info(_SLIM_NOTE)
         else:
@@ -432,8 +324,8 @@ def _render_worker_detail(sector_id: str) -> None:
                             raw_dir=raw_dir, user_no=selected_user_no)
 
     with tab_signal:
-        if _is_agg_only:
-            st.info(_AGG_NOTE)
+        if _is_cloud:
+            st.info(_LOCAL_ONLY_NOTE)
         elif user_jdf.empty:
             st.info("신호 품질 데이터가 없습니다.")
         elif _is_slim:
@@ -442,8 +334,8 @@ def _render_worker_detail(sector_id: str) -> None:
             _render_signal_quality(user_jdf)
 
     with tab_compare:
-        if _is_agg_only:
-            st.info(_AGG_NOTE)
+        if _is_cloud:
+            st.info(_LOCAL_ONLY_NOTE)
         elif _is_slim:
             st.info(_SLIM_NOTE)
         else:
@@ -453,8 +345,8 @@ def _render_worker_detail(sector_id: str) -> None:
                                        user_access=user_access)
 
     with tab_journey:
-        if _is_agg_only:
-            _render_locus_agg_table(user_agg_df, locus_meta)
+        if _is_cloud:
+            st.info(_LOCAL_ONLY_NOTE)
         elif user_jdf.empty:
             st.info("보정된 journey 데이터가 없습니다.")
         elif _is_slim:
@@ -464,52 +356,35 @@ def _render_worker_detail(sector_id: str) -> None:
                                       user_info=user_info)
 
     with tab_map:
-        if _is_agg_only:
-            _render_locus_map_agg(user_agg_df, locus_meta)
+        if _is_cloud:
+            st.info(_LOCAL_ONLY_NOTE)
         else:
             _render_locus_map(user_jdf, locus_meta)
 
     with tab_phys:
-        if _is_agg_only:
-            st.info(_AGG_NOTE)
+        if _is_cloud:
+            st.info(_LOCAL_ONLY_NOTE)
         else:
             _render_physical_validation(sector_id, user_jdf)
 
-def _render_worker_kpi(
-    user_jdf: pd.DataFrame,
-    user_info,
-    user_agg_df: pd.DataFrame | None = None,
-) -> None:
+def _render_worker_kpi(user_jdf: pd.DataFrame, user_info) -> None:
     """선택된 작업자의 KPI 요약.
 
     journey.parquet 없는 Cloud 환경에서도 안전하게 동작하도록
     컬럼 존재 여부를 확인하고 없으면 0으로 처리.
-    user_agg_df 가 있으면 agg 집계에서 파생 (Cloud agg-only 모드).
     """
-    if user_agg_df is None:
-        user_agg_df = pd.DataFrame()
-
     def _col_sum(col: str, default=0) -> int:
         return int(user_jdf[col].sum()) if col in user_jdf.columns else default
 
     def _col_inv_sum(col: str, default=0) -> int:
         return int((~user_jdf[col]).sum()) if col in user_jdf.columns else default
 
-    # agg-only 모드: user_jdf 없고 agg 있을 때 파생값 사용
-    if user_jdf.empty and not user_agg_df.empty:
-        n_total    = int(user_agg_df["total_min"].sum())
-        n_gap      = int(user_agg_df["gap_filled_min"].sum())
-        n_low_conf = int(user_agg_df["low_confidence_min"].sum())
-        n_invalid  = 0   # agg에 없음
-        n_zero     = 0   # agg에 없음
-        n_transit  = 0   # agg에 없음
-    else:
-        n_total    = len(user_jdf)
-        n_gap      = _col_sum("is_gap_filled")
-        n_low_conf = _col_sum("is_low_confidence")
-        n_invalid  = _col_inv_sum("is_valid_transition")
-        n_zero     = int((user_jdf["signal_count"] == 0).sum()) if "signal_count" in user_jdf.columns else 0
-        n_transit  = _col_sum("is_transition")
+    n_total    = len(user_jdf)
+    n_gap      = _col_sum("is_gap_filled")
+    n_low_conf = _col_sum("is_low_confidence")
+    n_invalid  = _col_inv_sum("is_valid_transition")
+    n_zero     = int((user_jdf["signal_count"] == 0).sum()) if "signal_count" in user_jdf.columns else 0
+    n_transit  = _col_sum("is_transition")
 
     gap_pct   = n_gap / n_total * 100 if n_total > 0 else 0
     lowc_pct  = n_low_conf / n_total * 100 if n_total > 0 else 0
