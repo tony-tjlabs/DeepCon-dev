@@ -85,15 +85,67 @@ class DriveStorage:
     # journey_slim.parquet 는 온디맨드(ensure_journey_slim)로만 다운로드
     _SKIP_PATTERNS = {"journey.parquet", "journey_slim.parquet"}
 
+    def _collect_download_tasks(
+        self, recent_dates: "set[str] | None" = None
+    ) -> "list[dict]":
+        """
+        Drive 파일 목록에서 다운로드 대상 태스크를 수집.
+
+        Args:
+            recent_dates: None이면 전체, set이면 해당 날짜 파일만 포함
+        """
+        files = self.list_files(force_refresh=(recent_dates is None))
+        tasks = []
+        for f in files:
+            parsed = self._parse_drive_name(f["name"])
+            if not parsed:
+                # 모델 파일은 항상 포함
+                if self._parse_model_name(f["name"]):
+                    tasks.append(f)
+                continue
+            _, date_str, filename = parsed
+            if filename in self._SKIP_PATTERNS:
+                continue
+            if recent_dates is not None and date_str not in recent_dates:
+                continue
+            tasks.append(f)
+        return tasks
+
+    def sync_recent(self, n_dates: int = 14) -> int:
+        """
+        가장 최근 n_dates 일분 파일만 동기화 (Cold start UX 개선용).
+
+        전체 파일 목록에서 날짜를 파싱한 뒤 최신 n개 날짜로 필터링.
+        나머지는 이후 sync_all() 또는 on-demand 다운로드로 처리.
+        """
+        files = self.list_files(force_refresh=True)
+
+        # 날짜 목록 수집
+        dates: set[str] = set()
+        for f in files:
+            parsed = self._parse_drive_name(f["name"])
+            if parsed:
+                dates.add(parsed[1])
+
+        recent = set(sorted(dates)[-n_dates:])
+        logger.info(f"sync_recent: {len(dates)}일 중 최근 {len(recent)}일 동기화 — {sorted(recent)[-3:]}")
+
+        # recent 날짜 + 모델 파일 다운로드 (sync_all 내부 로직 재사용)
+        return self._do_sync(recent_dates=recent)
+
     def sync_all(self) -> int:
-        """Drive 파일을 로컬에 다운로드 (journey.parquet 제외, 모델 포함)."""
+        """Drive 파일을 모두 다운로드 (journey.parquet / journey_slim 제외, 모델 포함)."""
+        return self._do_sync(recent_dates=None)
+
+    def _do_sync(self, recent_dates: "set[str] | None") -> int:
+        """실제 다운로드 루틴 (sync_all / sync_recent 공유)."""
         from googleapiclient.http import MediaIoBaseDownload
 
         if self._local_dir is None:
             logger.warning("DriveStorage: local_dir 미설정")
             return 0
 
-        files = self.list_files(force_refresh=True)
+        files = self.list_files()
         service = self._get_service()
         new_count = 0
         skip_count = 0
@@ -136,6 +188,10 @@ class DriveStorage:
 
             if filename in self._SKIP_PATTERNS:
                 skip_count += 1
+                continue
+
+            # recent_dates 필터 (sync_recent 모드)
+            if recent_dates is not None and date_str not in recent_dates:
                 continue
 
             local_dir = self._local_dir / sector_id / date_str

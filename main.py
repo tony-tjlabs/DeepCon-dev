@@ -33,45 +33,90 @@ from src.dashboard.styles import inject_css
 
 
 # ─── CLOUD_MODE: Google Drive 동기화 ─────────────────────────────
+_RECENT_DAYS   = 14   # Phase-1: 최근 N일 우선 로드 (빠른 시작)
+
+def _bg_sync_full(drives_cfg: list[tuple]) -> None:
+    """
+    백그라운드 스레드: 나머지 전체 날짜 동기화.
+
+    Phase-1(최근 14일)이 완료된 후 실행.
+    Streamlit UI를 건드리지 않으므로 thread-safe.
+    결과는 디스크에 저장되고, 사용자가 해당 날짜를 선택할 때 자동으로 로드됨.
+    """
+    import logging
+    _log = logging.getLogger(__name__)
+    for creds, folder_id, sector_id, local_dir in drives_cfg:
+        try:
+            from src.pipeline.drive_storage import DriveStorage
+            drive = DriveStorage(creds, folder_id)
+            drive._local_dir = local_dir
+            new_count = drive.sync_all()
+            if new_count:
+                _log.info(f"[BG sync] {sector_id}: {new_count}개 추가 다운로드 완료")
+        except Exception as e:
+            _log.warning(f"[BG sync] {sector_id} 실패: {e}")
+
+
 def _init_drive_cache() -> None:
     """
-    CLOUD_MODE 데이터 초기화.
+    CLOUD_MODE 데이터 초기화 (2-Phase Progressive Loading).
 
-    ★ v4: sector별 독립 Drive 폴더에서 다운로드.
-    GitHub 리포에 기본 데이터(worker/space/company/meta) 포함 → SA 키 없어도 작동.
-    SA 키 있으면 Drive에서 신규 데이터 추가 다운로드.
+    Phase 1 (동기, 빠름):  최근 14일 데이터 다운로드 → 앱 즉시 사용 가능
+    Phase 2 (백그라운드):  나머지 전체 날짜 → 스레드로 조용히 완료
+
+    ★ Cold start UX: 64MB 전체 대신 23MB(14일)만 먼저 받아 시작 시간 단축
     """
     if not cfg.CLOUD_MODE:
         return
     if st.session_state.get("_drive_synced"):
         return
 
-    import logging
+    import logging, threading
     _log = logging.getLogger(__name__)
 
     try:
         from src.pipeline.drive_storage import init_drive_storage_from_secrets
-        drives = init_drive_storage_from_secrets()  # dict[sector_id, DriveStorage] or None
+        drives = init_drive_storage_from_secrets()
         if drives is None:
             _log.info("DriveStorage: SA 키 없음 → git 데이터만 사용")
             st.session_state["_drive_synced"] = True
             st.session_state["_drive_status"] = "no_sa"
             return
 
+        # ── Phase 1: 최근 14일 우선 동기화 ─────────────────────────
         total_new = 0
+        bg_args: list[tuple] = []
         for sector_id, drive in drives.items():
             drive._local_dir = cfg.PROCESSED_DIR
-            new_count = drive.sync_all()
+            new_count = drive.sync_recent(n_dates=_RECENT_DAYS)
             total_new += new_count
-            _log.info(f"Drive sync [{sector_id}]: {new_count} new files")
+            _log.info(f"Drive sync recent [{sector_id}]: {new_count} new files")
+            # Phase 2 용 인자 수집 (credentials dict 복사)
+            bg_args.append((
+                drive._credentials_info,
+                drive._folder_id,
+                sector_id,
+                cfg.PROCESSED_DIR,
+            ))
 
         if total_new > 0:
-            st.toast(f"☁️ 신규 {total_new}개 파일 동기화", icon="✅")
+            st.toast(f"☁️ {total_new}개 최신 파일 로드 완료", icon="✅")
             from src.pipeline.cache_manager import detect_processed_dates
             detect_processed_dates.clear()
 
         st.session_state["_drive_synced"] = True
         st.session_state["_drive_status"] = f"ok:{total_new}"
+        st.session_state["_bg_sync_done"] = False
+
+        # ── Phase 2: 나머지 날짜 백그라운드 동기화 ─────────────────
+        t = threading.Thread(
+            target=_bg_sync_full,
+            args=(bg_args,),
+            daemon=True,
+        )
+        t.start()
+        _log.info("Phase-2 백그라운드 동기화 스레드 시작")
+
     except Exception as e:
         _log.warning(f"Drive sync failed: {e}")
         st.session_state["_drive_synced"] = True
@@ -234,10 +279,16 @@ def render_sidebar() -> tuple[str, str]:
                     unsafe_allow_html=True,
                 )
             _ds = st.session_state.get("_drive_status", "")
+            _bg_done = st.session_state.get("_bg_sync_done", True)
             _di = "☁️" if _ds.startswith("ok") else "⚠️" if _ds.startswith("error") else "📁"
-            _dl = ("동기화됨" if _ds.startswith("ok") else
-                   "git 데이터" if _ds == "no_sa" else
-                   "오류" if _ds.startswith("error") else "")
+            if _ds.startswith("ok"):
+                _dl = "최근 14일 로드됨" + ("" if _bg_done else " · 전체 동기화 중…")
+            elif _ds == "no_sa":
+                _dl = "git 데이터"
+            elif _ds.startswith("error"):
+                _dl = "오류"
+            else:
+                _dl = ""
             _drive_line = f"<br>{_di} Drive: {_dl}" if _dl else ""
             st.markdown(
                 f"<div style='font-size:0.78rem; color:#6A7A95; line-height:1.8;'>"

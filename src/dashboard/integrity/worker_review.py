@@ -95,11 +95,30 @@ def _render_worker_detail(sector_id: str) -> None:
         ) or processed[-1]
 
     journey_path = paths["processed_dir"] / date_str / "journey.parquet"
+    slim_path    = paths["processed_dir"] / date_str / "journey_slim.parquet"
     worker_path  = paths["processed_dir"] / date_str / "worker.parquet"
 
     if not worker_path.exists():
         st.error("해당 날짜의 worker.parquet가 없습니다.")
         return
+
+    # ── journey_slim 온디맨드 다운로드 (정합성 탭 KPI 활성화) ──────────
+    # journey.parquet도 없고 slim도 없을 때, Cloud 환경이면 Drive에서 받아옴
+    if not journey_path.exists() and not slim_path.exists():
+        import config as _cfg
+        if _cfg.CLOUD_MODE:
+            with st.spinner(
+                f"☁️ 정합성 데이터 다운로드 중… ({date_str} · 약 10~15초)"
+            ):
+                try:
+                    from src.pipeline.drive_storage import init_drive_storage_from_secrets
+                    _drive = init_drive_storage_from_secrets(sector_id)
+                    if _drive:
+                        _drive.ensure_journey_slim(
+                            sector_id, date_str, _cfg.PROCESSED_DIR
+                        )
+                except Exception as _e:
+                    logger.warning(f"정합성 journey_slim 다운로드 실패: {_e}")
 
     worker_df = _load_worker(sector_id, date_str, str(worker_path))
     if worker_df.empty:
