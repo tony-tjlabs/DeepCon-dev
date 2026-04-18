@@ -136,12 +136,16 @@ def render_daily_tab(sector_id: str | None = None):
 
     with tabs[2]:
         # journey는 session_state에서 재사용 (탭 전환 시 중복 로드 방지)
+        # ★ CLOUD_MODE: journey_slim 1일 = ~470MB → OOM 방지를 위해 스킵
+        import config as _cfg
         _cache_key = f"journey_{sid}_{date_str}"
         journey_safety = st.session_state.get(_cache_key)
-        if journey_safety is None:
+        if journey_safety is None and not _cfg.CLOUD_MODE:
             with st.spinner("이동 데이터 로드 중..."):
                 journey_safety = load_journey(date_str, sid)
             st.session_state[_cache_key] = journey_safety
+        if journey_safety is None:
+            journey_safety = pd.DataFrame()
         render_safety(filtered_worker_df, space_df, locus_dict, date_str, sid, has_cre, journey_safety)
 
     with tabs[3]:
@@ -151,13 +155,15 @@ def render_daily_tab(sector_id: str | None = None):
         render_company(company_df, filtered_worker_df, has_ewi, has_cre)
 
     with tabs[5]:
-        # session_state 캐시에서 재사용 (tabs[2]에서 이미 로드했을 수 있음)
+        # ★ CLOUD_MODE: journey_slim 1일 = ~470MB → OOM 방지를 위해 스킵
         _cache_key = f"journey_{sid}_{date_str}"
         journey_df = st.session_state.get(_cache_key)
-        if journey_df is None:
+        if journey_df is None and not _cfg.CLOUD_MODE:
             with st.spinner("이동 데이터 로드 중..."):
                 journey_df = load_journey(date_str, sid)
             st.session_state[_cache_key] = journey_df
+        if journey_df is None:
+            journey_df = pd.DataFrame()
         render_journey_patterns(filtered_worker_df, journey_df, sid)
 
     # ── AI 분석 섹션 ─────────────────────────────────────────────

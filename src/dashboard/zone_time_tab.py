@@ -124,7 +124,7 @@ def _compute_hourly_category(sector_id: str, date_str: str, journey_parquet: str
     jdf["hour"]     = jdf["timestamp"].dt.hour
 
     hourly = (
-        jdf[jdf["is_work_hour"]]
+        jdf[jdf["is_work_hour"].fillna(False)]
         .groupby(["hour", "category"])["user_no"]
         .nunique()
         .reset_index(name="workers")
@@ -151,7 +151,7 @@ def _compute_mat_eod(sector_id: str, date_str: str, journey_parquet: str, worker
         columns=["user_no", "in_datetime", "out_datetime"],
     )
 
-    j_work = jdf[jdf["is_work_hour"] & jdf["locus_token"].isin(work_set)].copy()
+    j_work = jdf[jdf["is_work_hour"].fillna(False) & jdf["locus_token"].isin(work_set)].copy()
 
     # MAT: 첫 WORK 도달
     first_work = (

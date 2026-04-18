@@ -150,12 +150,16 @@ def _render_daily_safety(sector_id: str, date_str: str, shift_filter: str | None
         logger.warning(f"AI 코멘터리 렌더 실패 (safety): {e}")
 
     # journey 로드 (세션 캐시 활용)
+    # ★ CLOUD_MODE: journey_slim 1일 = ~470MB 메모리 → OOM 방지를 위해 스킵
+    import config as _cfg
     _cache_key = f"journey_{sector_id}_{date_str}"
     journey_df = st.session_state.get(_cache_key)
-    if journey_df is None:
+    if journey_df is None and not _cfg.CLOUD_MODE:
         with st.spinner("journey 로드 중..."):
             journey_df = load_journey(date_str, sector_id)
         st.session_state[_cache_key] = journey_df
+    if journey_df is None:
+        journey_df = pd.DataFrame()
 
     render_safety(worker_df, space_df, locus_dict, date_str,
                   sector_id, has_cre, journey_df)
