@@ -81,8 +81,9 @@ class DriveStorage:
         m = re.match(r"^model__(.+?)__(.+)$", name)
         return (m.group(1), m.group(2)) if m else None
 
-    # Cloud에서 다운로드 제외할 파일 (메모리/시간 절약)
-    _SKIP_PATTERNS = {"journey.parquet"}  # 35MB/일
+    # Cloud 시작 시 다운로드 제외할 파일 (용량/시간 절약)
+    # journey_slim.parquet 는 온디맨드(ensure_journey_slim)로만 다운로드
+    _SKIP_PATTERNS = {"journey.parquet", "journey_slim.parquet"}
 
     def sync_all(self) -> int:
         """Drive 파일을 로컬에 다운로드 (journey.parquet 제외, 모델 포함)."""
@@ -163,6 +164,58 @@ class DriveStorage:
 
         logger.info(f"Drive sync: {new_count} new, {skip_count} skipped / {len(files)} total")
         return new_count
+
+    def ensure_journey_slim(self, sector_id: str, date_str: str, local_processed_dir: "Path") -> bool:
+        """
+        특정 날짜의 journey_slim.parquet 를 온디맨드로 다운로드.
+
+        - 이미 로컬에 있으면 즉시 True 반환 (재다운로드 없음)
+        - Drive에서 {sector_id}_{date_str}_journey_slim.parquet 를 찾아 다운로드
+        - 실패 시 False 반환 (탭에서 graceful degradation)
+
+        Args:
+            sector_id: 섹터 ID (예: Y1_SKHynix)
+            date_str:  날짜 문자열 (YYYYMMDD)
+            local_processed_dir: 로컬 processed 루트 경로 (cfg.PROCESSED_DIR)
+
+        Returns:
+            True: 다운로드 성공 또는 이미 존재
+            False: Drive에 파일 없거나 다운로드 실패
+        """
+        local_path = local_processed_dir / sector_id / date_str / "journey_slim.parquet"
+
+        # 이미 있으면 스킵
+        if local_path.exists():
+            return True
+
+        drive_name = f"{sector_id}_{date_str}_journey_slim.parquet"
+        files      = self.list_files()
+        target     = next((f for f in files if f["name"] == drive_name), None)
+
+        if target is None:
+            logger.info(f"Drive에 {drive_name} 없음 (아직 업로드 안 됐거나 해당 날짜 없음)")
+            return False
+
+        try:
+            from googleapiclient.http import MediaIoBaseDownload
+            service = self._get_service()
+            request = service.files().get_media(
+                fileId=target["id"], supportsAllDrives=True
+            )
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            buf = io.BytesIO()
+            downloader = MediaIoBaseDownload(buf, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+            buf.seek(0)
+            local_path.write_bytes(buf.read())
+            size_mb = round(local_path.stat().st_size / 1024 / 1024, 1)
+            logger.info(f"journey_slim 다운로드 완료: {drive_name} ({size_mb}MB)")
+            return True
+        except Exception as e:
+            logger.warning(f"journey_slim 다운로드 실패 ({drive_name}): {e}")
+            return False
 
 
 # ── sector별 폴더 ID 기본값 ──────────────────────────────────────

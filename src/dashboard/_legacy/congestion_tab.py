@@ -141,11 +141,45 @@ def _render_single_day(sid: str, processed: list[str], locus_dict: dict):
 
     # journey 로드 (★ 캐시 활용 — 2회차부터 즉시 로드)
     # 혼잡도 분석 + 예측에 필요한 컬럼만 로드 (메모리 절감)
+    # Cloud 환경: journey.parquet 없으면 journey_slim.parquet 자동 fallback
     _CONGESTION_COLS = ["timestamp", "user_no", "locus_id", "locus_token", "is_work_hour"]
-    journey_full = load_journey(date_str, sid, columns=_CONGESTION_COLS)
+
+    from src.pipeline.cache_manager import is_journey_slim
+    import config as _cfg
+    from pathlib import Path as _Path
+
+    # journey.parquet 없고 slim도 없으면 → Drive 온디맨드 다운로드 시도
+    _slim_local = (_cfg.PROCESSED_DIR / sid / date_str / "journey_slim.parquet")
+    _full_local = (_cfg.PROCESSED_DIR / sid / date_str / "journey.parquet")
+    if not _full_local.exists() and not _slim_local.exists() and _cfg.CLOUD_MODE:
+        with st.spinner(
+            f"☁️ 혼잡도 데이터 다운로드 중... ({date_str} · 약 10~15초 소요)"
+        ):
+            try:
+                from src.pipeline.drive_storage import init_drive_storage_from_secrets
+                _drive = init_drive_storage_from_secrets(sid)
+                if _drive:
+                    _drive.ensure_journey_slim(sid, date_str, _cfg.PROCESSED_DIR)
+            except Exception as _e:
+                logger.warning(f"journey_slim 온디맨드 다운로드 실패: {_e}")
+
+    with st.spinner("혼잡도 분석 중..."):
+        journey_full = load_journey(date_str, sid, columns=_CONGESTION_COLS)
+
     if journey_full.empty:
-        st.warning("journey.parquet가 없습니다. 로컬 환경에서 파이프라인을 실행하세요.")
+        st.warning(
+            "📦 혼잡도 데이터가 없습니다. "
+            "Drive에 journey_slim.parquet 업로드 후 이용 가능합니다."
+        )
         return
+
+    # Cloud slim 안내
+    if is_journey_slim(journey_full):
+        st.info(
+            "☁️ **Cloud 환경** — 슬림 데이터(6컬럼) 기준으로 혼잡도를 분석합니다. "
+            "첫 날짜 접근 시 **약 10~15초** 소요되며, "
+            "이후 같은 날짜는 캐시에서 즉시 로드됩니다."
+        )
 
     with st.spinner("혼잡도 데이터 분석 중..."):
         cols = [c for c in ["timestamp", "user_no", "locus_id", "locus_token"] if c in journey_full.columns]

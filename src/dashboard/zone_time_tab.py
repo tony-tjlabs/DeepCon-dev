@@ -1475,14 +1475,52 @@ def render_zone_time_tab(sector_id: str) -> None:
     proc_dir = paths["processed_dir"] / selected_date
     worker_parquet  = str(proc_dir / "worker.parquet")
     journey_parquet = str(proc_dir / "journey.parquet")
+    slim_parquet    = str(proc_dir / "journey_slim.parquet")
 
     from pathlib import Path
     if not Path(worker_parquet).exists():
         st.error(f"worker.parquet 없음: {worker_parquet}")
         return
+
+    # journey 파일 결정: full → slim(Drive 온디맨드) 순으로 fallback
+    _using_slim = False
     if not Path(journey_parquet).exists():
-        st.error(f"journey.parquet 없음: {journey_parquet}")
-        return
+        # 로컬에 slim이 없으면 Drive에서 온디맨드 다운로드 시도
+        if not Path(slim_parquet).exists():
+            import config as _cfg
+            if _cfg.CLOUD_MODE:
+                with st.spinner(
+                    f"☁️ 작업시간 데이터 다운로드 중... "
+                    f"({selected_date} · 약 10~15초 소요)"
+                ):
+                    try:
+                        from src.pipeline.drive_storage import init_drive_storage_from_secrets
+                        _drive = init_drive_storage_from_secrets(sector_id)
+                        if _drive:
+                            _drive.ensure_journey_slim(
+                                sector_id, selected_date, _cfg.PROCESSED_DIR
+                            )
+                    except Exception as _e:
+                        logger.warning(f"journey_slim 온디맨드 다운로드 실패: {_e}")
+
+        if Path(slim_parquet).exists():
+            journey_parquet = slim_parquet
+            _using_slim = True
+        else:
+            st.warning(
+                "📦 작업시간 분석에 필요한 데이터가 없습니다. "
+                "Drive에 journey_slim.parquet 업로드 후 이용 가능합니다."
+            )
+            return
+
+    # Cloud slim 안내 배너
+    if _using_slim:
+        st.info(
+            "☁️ **Cloud 환경** — 핵심 6개 컬럼 슬림 데이터를 사용합니다. "
+            "첫 날짜 접근 시 **약 10~15초** 다운로드 후 캐시됩니다. "
+            "이후 같은 날짜는 즉시 로드됩니다. "
+            "개인별 상세 타임라인은 로컬 전체 데이터 환경에서만 지원됩니다."
+        )
 
     # ── 데이터 로드 (컬럼 프루닝 적용) ────────────────────────────
     with st.spinner("데이터 로드 중..."):

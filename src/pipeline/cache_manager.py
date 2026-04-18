@@ -328,35 +328,52 @@ def load_journey(
     """
     journey.parquet 로드. ★ 5분 캐시 + 컬럼 프루닝 옵션.
 
-    패턴/혼잡도 탭 등 journey가 필요한 곳에서만 호출.
+    Cloud 환경에서 journey.parquet 없으면 journey_slim.parquet(6컬럼)로
+    자동 fallback. 반환 DataFrame에 `_is_slim=True` attr 표시.
 
     Args:
         date_str: 날짜 문자열 (YYYYMMDD)
         sector_id: Sector ID (None이면 기본값 사용)
         columns: 로드할 컬럼 목록 (None이면 전체 로드)
-            - JOURNEY_CORE_COLUMNS 사용 권장 (~40% 메모리 절약)
-            - 또는 JOURNEY_COLUMNS_BY_TAB[탭이름] 사용
 
     Returns:
-        DataFrame (컬럼 프루닝 적용 시 지정 컬럼만 포함)
+        DataFrame (slim fallback 시 6컬럼 subset)
     """
     date_dir = _date_dir(date_str, sector_id)
-    p = date_dir / "journey.parquet"
-    if not p.exists():
+    p      = date_dir / "journey.parquet"
+    p_slim = date_dir / "journey_slim.parquet"
+
+    # ── 파일 선택: full → slim 순으로 시도 ───────────────────────
+    if p.exists():
+        target, is_slim = p, False
+    elif p_slim.exists():
+        target, is_slim = p_slim, True
+        logger.info(f"journey_slim fallback: {date_str} ({sector_id})")
+    else:
         return pd.DataFrame()
 
-    if columns:
-        # 존재하는 컬럼만 필터링 (없는 컬럼 무시)
-        try:
-            import pyarrow.parquet as pq
-            schema = pq.read_schema(p)
-            available = set(schema.names)
+    try:
+        import pyarrow.parquet as pq
+        schema    = pq.read_schema(target)
+        available = set(schema.names)
+
+        if columns:
             valid_cols = [c for c in columns if c in available]
-            if valid_cols:
-                return pd.read_parquet(p, columns=valid_cols)
-        except Exception as e:
-            logger.debug(f"스키마 읽기 실패, 전체 로드로 fallback: {e}")
-    return pd.read_parquet(p)
+            df = pd.read_parquet(target, columns=valid_cols) if valid_cols else pd.read_parquet(target)
+        else:
+            df = pd.read_parquet(target)
+    except Exception as e:
+        logger.debug(f"스키마 읽기 실패, 전체 로드로 fallback: {e}")
+        df = pd.read_parquet(target)
+
+    # slim 여부를 DataFrame 속성으로 전달 (탭에서 안내 메시지 표시용)
+    df.attrs["_is_slim"] = is_slim
+    return df
+
+
+def is_journey_slim(df: pd.DataFrame) -> bool:
+    """load_journey() 반환값이 slim fallback 버전인지 확인."""
+    return bool(df.attrs.get("_is_slim", False))
 
 
 @st.cache_data(ttl=DAILY_PARQUET, show_spinner=False)
