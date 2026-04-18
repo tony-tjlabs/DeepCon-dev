@@ -96,6 +96,7 @@ def _render_worker_detail(sector_id: str) -> None:
 
     journey_path = paths["processed_dir"] / date_str / "journey.parquet"
     slim_path    = paths["processed_dir"] / date_str / "journey_slim.parquet"
+    agg_path     = paths["processed_dir"] / date_str / "journey_agg.parquet"
     worker_path  = paths["processed_dir"] / date_str / "worker.parquet"
 
     if not worker_path.exists():
@@ -351,6 +352,20 @@ def _render_worker_detail(sector_id: str) -> None:
             .reset_index(drop=True)
         ) if not jdf.empty else pd.DataFrame()
 
+        # ★ journey_agg: Cloud 환경에서 journey/slim 없을 때 사전 집계 데이터 로드
+        # (~3.5MB/일, Drive에서 자동 다운로드됨)
+        agg_df = pd.DataFrame()
+        if _cfg.CLOUD_MODE and not journey_path.exists() and not slim_path.exists():
+            if agg_path.exists():
+                try:
+                    agg_df = pd.read_parquet(str(agg_path))
+                except Exception as _e:
+                    logger.warning(f"journey_agg 로드 실패: {_e}")
+        user_agg_df = (
+            agg_df[agg_df["user_no"] == selected_user_no].copy()
+            if not agg_df.empty else pd.DataFrame()
+        )
+
         # locus 메타 조인 (locus_type, building, floor, function, locus_x/y 등)
         if not locus_meta.empty and not user_jdf.empty:
             user_jdf = _enrich_journey_with_locus(user_jdf, locus_meta)
@@ -376,14 +391,20 @@ def _render_worker_detail(sector_id: str) -> None:
         access_total_min = float(user_info.get("work_minutes") or 0)
 
     # ── 5) KPI 카드 ─────────────────────────────────────────────────
-    _render_worker_kpi(user_jdf, user_info)
+    _render_worker_kpi(user_jdf, user_info, user_agg_df=user_agg_df)
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     # slim 여부 판단 — Cloud에서 journey_slim 사용 시 signal_count 등 없음
     _is_slim = not user_jdf.empty and "signal_count" not in user_jdf.columns
+    # agg-only 모드 — Cloud에서 journey/slim 없고 journey_agg만 있을 때
+    _is_agg_only = user_jdf.empty and not user_agg_df.empty
     _SLIM_NOTE = (
         "☁️ **Cloud 환경 — 슬림 데이터** · 이 탭은 전체 `journey.parquet`가 필요합니다.  \n"
         "신호 품질·보정 상세는 로컬 환경 또는 전체 데이터 다운로드 후 확인 가능합니다."
+    )
+    _AGG_NOTE = (
+        "☁️ **Cloud 환경 — 집계 데이터** · 이 탭은 분 단위 `journey.parquet`가 필요합니다.  \n"
+        "전체 `journey.parquet` 다운로드 후 Raw BLE · 신호 품질 · 보정 상세를 확인할 수 있습니다."
     )
 
     # ── 6) 탭 (근거-쌓기 순서: Raw → 신호품질 → 비교 → 보정 → 맵 → 물리검증) ──
@@ -401,7 +422,9 @@ def _render_worker_detail(sector_id: str) -> None:
         _render_access_record(user_access, user_info)
 
     with tab_raw:
-        if _is_slim:
+        if _is_agg_only:
+            st.info(_AGG_NOTE)
+        elif _is_slim:
             st.info(_SLIM_NOTE)
         else:
             _render_raw_ble(user_tward, date_str, access_total_min, locus_meta, user_jdf,
@@ -409,7 +432,9 @@ def _render_worker_detail(sector_id: str) -> None:
                             raw_dir=raw_dir, user_no=selected_user_no)
 
     with tab_signal:
-        if user_jdf.empty:
+        if _is_agg_only:
+            st.info(_AGG_NOTE)
+        elif user_jdf.empty:
             st.info("신호 품질 데이터가 없습니다.")
         elif _is_slim:
             st.info(_SLIM_NOTE)
@@ -417,7 +442,9 @@ def _render_worker_detail(sector_id: str) -> None:
             _render_signal_quality(user_jdf)
 
     with tab_compare:
-        if _is_slim:
+        if _is_agg_only:
+            st.info(_AGG_NOTE)
+        elif _is_slim:
             st.info(_SLIM_NOTE)
         else:
             _render_journey_comparison(user_tward, user_jdf, access_total_min,
@@ -426,7 +453,9 @@ def _render_worker_detail(sector_id: str) -> None:
                                        user_access=user_access)
 
     with tab_journey:
-        if user_jdf.empty:
+        if _is_agg_only:
+            _render_locus_agg_table(user_agg_df, locus_meta)
+        elif user_jdf.empty:
             st.info("보정된 journey 데이터가 없습니다.")
         elif _is_slim:
             st.info(_SLIM_NOTE)
@@ -435,29 +464,52 @@ def _render_worker_detail(sector_id: str) -> None:
                                       user_info=user_info)
 
     with tab_map:
-        _render_locus_map(user_jdf, locus_meta)
+        if _is_agg_only:
+            _render_locus_map_agg(user_agg_df, locus_meta)
+        else:
+            _render_locus_map(user_jdf, locus_meta)
 
     with tab_phys:
-        _render_physical_validation(sector_id, user_jdf)
+        if _is_agg_only:
+            st.info(_AGG_NOTE)
+        else:
+            _render_physical_validation(sector_id, user_jdf)
 
-def _render_worker_kpi(user_jdf: pd.DataFrame, user_info) -> None:
+def _render_worker_kpi(
+    user_jdf: pd.DataFrame,
+    user_info,
+    user_agg_df: pd.DataFrame | None = None,
+) -> None:
     """선택된 작업자의 KPI 요약.
 
     journey.parquet 없는 Cloud 환경에서도 안전하게 동작하도록
     컬럼 존재 여부를 확인하고 없으면 0으로 처리.
+    user_agg_df 가 있으면 agg 집계에서 파생 (Cloud agg-only 모드).
     """
+    if user_agg_df is None:
+        user_agg_df = pd.DataFrame()
+
     def _col_sum(col: str, default=0) -> int:
         return int(user_jdf[col].sum()) if col in user_jdf.columns else default
 
     def _col_inv_sum(col: str, default=0) -> int:
         return int((~user_jdf[col]).sum()) if col in user_jdf.columns else default
 
-    n_total    = len(user_jdf)
-    n_gap      = _col_sum("is_gap_filled")
-    n_low_conf = _col_sum("is_low_confidence")
-    n_invalid  = _col_inv_sum("is_valid_transition")
-    n_zero     = int((user_jdf["signal_count"] == 0).sum()) if "signal_count" in user_jdf.columns else 0
-    n_transit  = _col_sum("is_transition")
+    # agg-only 모드: user_jdf 없고 agg 있을 때 파생값 사용
+    if user_jdf.empty and not user_agg_df.empty:
+        n_total    = int(user_agg_df["total_min"].sum())
+        n_gap      = int(user_agg_df["gap_filled_min"].sum())
+        n_low_conf = int(user_agg_df["low_confidence_min"].sum())
+        n_invalid  = 0   # agg에 없음
+        n_zero     = 0   # agg에 없음
+        n_transit  = 0   # agg에 없음
+    else:
+        n_total    = len(user_jdf)
+        n_gap      = _col_sum("is_gap_filled")
+        n_low_conf = _col_sum("is_low_confidence")
+        n_invalid  = _col_inv_sum("is_valid_transition")
+        n_zero     = int((user_jdf["signal_count"] == 0).sum()) if "signal_count" in user_jdf.columns else 0
+        n_transit  = _col_sum("is_transition")
 
     gap_pct   = n_gap / n_total * 100 if n_total > 0 else 0
     lowc_pct  = n_low_conf / n_total * 100 if n_total > 0 else 0
@@ -1890,6 +1942,223 @@ def _render_minute_comparison_table(
         f"표시: {len(disp)}행 / 전체 {len(df_table)}분  ·  "
         "gap-fill = BLE 음영 구간 보정값  ·  보정-only = Journey 있으나 Raw 없는 구간"
     )
+
+
+def _render_locus_agg_table(user_agg_df: pd.DataFrame, locus_meta: pd.DataFrame) -> None:
+    """
+    Cloud agg-only 모드: journey_agg.parquet 기반 작업자 locus 체류 테이블.
+
+    분 단위 journey 없을 때 집계 데이터로 "어디서 얼마나 있었는지"를 보여준다.
+    """
+    if user_agg_df.empty:
+        st.info("집계 데이터가 없습니다.")
+        return
+
+    st.caption(
+        "ℹ️ **집계 데이터 모드** · `journey_agg.parquet` 기반 (분 단위 상세 없음).  \n"
+        "locus별 총 체류분, 근무시간 내 체류분, 활성도 분포를 표시합니다."
+    )
+
+    # locus_meta 조인 (locus_type, building, floor)
+    display = user_agg_df.copy()
+    if not locus_meta.empty and "locus_type" in locus_meta.columns:
+        display = display.merge(
+            locus_meta[["locus_id", "locus_type"]].rename(columns={"locus_type": "_ltype"}),
+            on="locus_id", how="left",
+        )
+        display["locus_type"] = display["_ltype"].fillna("UNKNOWN")
+        display.drop(columns=["_ltype"], inplace=True, errors="ignore")
+    else:
+        display["locus_type"] = "UNKNOWN"
+
+    display = display.sort_values("total_min", ascending=False).reset_index(drop=True)
+
+    # KPI 요약
+    total = int(display["total_min"].sum())
+    work  = int(display["work_hour_min"].sum())
+    gap   = int(display["gap_filled_min"].sum())
+    low_c = int(display["low_confidence_min"].sum())
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.markdown(metric_card("총 체류", f"{total}분"), unsafe_allow_html=True)
+    with c2: st.markdown(metric_card("근무시간 체류", f"{work}분"), unsafe_allow_html=True)
+    with c3: st.markdown(metric_card("Gap-fill", f"{gap}분"), unsafe_allow_html=True)
+    with c4: st.markdown(metric_card("저신뢰 구간", f"{low_c}분"), unsafe_allow_html=True)
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    # 테이블 컬럼 정리
+    col_map = {
+        "locus_id":              "Locus ID",
+        "locus_name":            "장소명",
+        "building_name":         "건물",
+        "floor_name":            "층",
+        "locus_type":            "유형",
+        "total_min":             "총 체류(분)",
+        "work_hour_min":         "근무시간(분)",
+        "gap_filled_min":        "Gap-fill(분)",
+        "low_confidence_min":    "저신뢰(분)",
+        "activity_high_min":     "고활성(분)",
+        "activity_medium_min":   "중활성(분)",
+        "activity_low_min":      "저활성(분)",
+        "avg_active_ratio":      "평균 활성비율",
+        "avg_signal_count":      "평균 신호수",
+    }
+    show_cols = [c for c in col_map if c in display.columns]
+    tbl = display[show_cols].rename(columns=col_map)
+    tbl["평균 활성비율"] = tbl["평균 활성비율"].map("{:.2f}".format) if "평균 활성비율" in tbl.columns else None
+    tbl["평균 신호수"]   = tbl["평균 신호수"].map("{:.1f}".format) if "평균 신호수" in tbl.columns else None
+
+    st.dataframe(tbl, use_container_width=True, height=400)
+
+
+def _render_locus_map_agg(user_agg_df: pd.DataFrame, locus_meta: pd.DataFrame) -> None:
+    """
+    Cloud agg-only 모드: journey_agg.parquet 기반 locus 체류 히트맵.
+
+    분 단위 이동 경로 대신 "locus별 총 체류분"으로 버블 크기를 표현.
+    """
+    if user_agg_df.empty:
+        st.info("집계 데이터가 없습니다.")
+        return
+    if locus_meta.empty or "locus_x" not in locus_meta.columns:
+        st.info("locus 좌표 메타데이터가 없습니다.")
+        return
+
+    st.caption(
+        "ℹ️ **집계 데이터 모드** · `journey_agg.parquet` 기반 버블 맵.  \n"
+        "버블 크기 = 총 체류분. 이동 경로(선)는 분 단위 `journey.parquet`가 필요합니다."
+    )
+
+    # locus_meta 조인
+    df = user_agg_df.merge(
+        locus_meta[["locus_id", "locus_x", "locus_y", "building", "floor",
+                     "locus_type", "locus_meta_name"]],
+        on="locus_id", how="left",
+    )
+    df = df.dropna(subset=["locus_x", "locus_y"])
+    if df.empty:
+        st.info("좌표 정보가 있는 locus 데이터가 없습니다.")
+        return
+
+    # 건물/층 선택
+    bldg_floor_combos = (
+        df[df["building"].notna()][["building", "floor"]]
+        .dropna().drop_duplicates().sort_values(["building", "floor"])
+    )
+    view_options = ["🌐 전체"] + [
+        f"{r.building} / {r.floor}"
+        for r in bldg_floor_combos.itertuples(index=False)
+    ]
+    col_sel, col_info = st.columns([2, 3])
+    with col_sel:
+        selected_view = st.selectbox(
+            "건물 / 층 선택", view_options, key="locus_agg_map_sel",
+        )
+
+    if "전체" in selected_view:
+        view_df = df.copy()
+        bg_loci = locus_meta[locus_meta["building"].isna()]
+        title_txt = "전체"
+    else:
+        bldg, floor = selected_view.split(" / ", 1)
+        view_df = df[(df["building"] == bldg) & (df["floor"] == floor)]
+        bg_loci = locus_meta[(locus_meta["building"] == bldg) & (locus_meta["floor"] == floor)]
+        title_txt = f"{bldg} {floor}"
+
+    with col_info:
+        n_loci = len(view_df)
+        total_min = int(view_df["total_min"].sum())
+        st.markdown(
+            f"<div style='padding:8px 12px; background:#0D1B2A; border-radius:6px; "
+            f"font-size:0.83rem; color:#9AB5D4; margin-top:4px;'>"
+            f"<b style='color:#D5E5FF'>{title_txt}</b> — "
+            f"방문 locus <b style='color:#00C897'>{n_loci}곳</b> · "
+            f"총 체류 <b style='color:#00AEEF'>{total_min}분</b></div>",
+            unsafe_allow_html=True,
+        )
+
+    if view_df.empty:
+        st.info(f"'{selected_view}' 구역에 해당하는 체류 데이터가 없습니다.")
+        return
+
+    fig = go.Figure()
+
+    # 배경 locus
+    if not bg_loci.empty:
+        bg_meta_name = bg_loci.get("locus_meta_name", bg_loci.get("locus_id", pd.Series(dtype=str))).fillna("")
+        fig.add_trace(go.Scatter(
+            x=bg_loci["locus_x"], y=bg_loci["locus_y"],
+            mode="markers+text",
+            text=bg_loci["locus_id"],
+            textposition="top center",
+            textfont=dict(size=7, color="#4A6A8A"),
+            marker=dict(size=12, color="#1E3A5A", opacity=0.25,
+                        line=dict(width=1, color="#1E3A5A")),
+            name="locus 배경",
+            customdata=np.column_stack([
+                bg_loci["locus_id"].values,
+                bg_meta_name.values,
+            ]),
+            hovertemplate="<b>%{customdata[0]}</b> %{customdata[1]}<extra></extra>",
+        ))
+
+    # 체류 버블 (크기 = total_min)
+    max_min = view_df["total_min"].max()
+    bubble_size = ((view_df["total_min"] / max(max_min, 1)) * 40 + 8).clip(8, 50).tolist()
+    work_ratio = (view_df["work_hour_min"] / view_df["total_min"].clip(1)).fillna(0)
+    meta_name_col = view_df.get("locus_meta_name", view_df.get("locus_name", pd.Series(dtype=str))).fillna("")
+
+    fig.add_trace(go.Scatter(
+        x=view_df["locus_x"],
+        y=view_df["locus_y"],
+        mode="markers+text",
+        text=view_df["locus_id"],
+        textposition="top center",
+        textfont=dict(size=8, color="#C8D6E8"),
+        name="체류 locus",
+        marker=dict(
+            size=bubble_size,
+            color=work_ratio,
+            colorscale="Blues",
+            cmin=0, cmax=1,
+            showscale=True,
+            colorbar=dict(
+                title="근무시간 비율",
+                tickvals=[0, 0.5, 1],
+                ticktext=["0%", "50%", "100%"],
+                len=0.6, thickness=12,
+            ),
+            opacity=0.85,
+            line=dict(width=1, color="#0D1B2A"),
+        ),
+        customdata=np.column_stack([
+            view_df["locus_id"].values,
+            meta_name_col.values,
+            view_df["total_min"].values,
+            view_df["work_hour_min"].values,
+            view_df["gap_filled_min"].values,
+        ]),
+        hovertemplate=(
+            "<b>%{customdata[0]}</b> %{customdata[1]}<br>"
+            "총 체류: <b>%{customdata[2]}분</b><br>"
+            "근무시간: %{customdata[3]}분<br>"
+            "Gap-fill: %{customdata[4]}분<br>"
+            "x=%{x:.0f}, y=%{y:.0f}<extra></extra>"
+        ),
+    ))
+
+    fig.update_layout(
+        **{**PLOTLY_DARK, "margin": dict(l=20, r=60, t=30, b=20)},
+        height=520,
+        xaxis=dict(title="X", scaleanchor="y", scaleratio=1,
+                   gridcolor="#1A2A3A", zeroline=False),
+        yaxis=dict(title="Y", autorange="reversed",
+                   gridcolor="#1A2A3A", zeroline=False),
+        title=dict(text=f"Locus 체류 버블 맵 — {title_txt} (집계 데이터)",
+                   font=dict(size=13, color="#9AB5D4"), x=0.01),
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def _render_locus_map(user_jdf: pd.DataFrame, locus_meta: pd.DataFrame) -> None:
