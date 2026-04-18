@@ -1,0 +1,12 @@
+﻿locus_id,locus_name,locus_token,locus_type,sector_id,building,floor,status,notes
+L-M15X-001,FAB 5F,work_zone,WORK,M15X_SKHynix,FAB,5F,active,
+L-M15X-002,FAB 6F,work_zone,WORK,M15X_SKHynix,FAB,6F,active,
+L-M15X-003,FAB 7F,work_zone,WORK,M15X_SKHynix,FAB,7F,active,
+L-M15X-004,FAB RF,work_zone,WORK,M15X_SKHynix,FAB,RF,active,
+L-M15X-005,FAB 건너 화장실,restroom,REST,M15X_SKHynix,FAB 건너편,,active,
+L-M15X-006,FAB 건너 휴게실,breakroom,REST,M15X_SKHynix,FAB 건너편,,active,
+L-M15X-007,FAB 건너 흡연실,smoking_area,REST,M15X_SKHynix,FAB 건너편,,active,
+L-M15X-008,공사현장,outdoor_work,WORK,M15X_SKHynix,외부,,active,
+L-M15X-009,타각기,timeclock,GATE,M15X_SKHynix,외부,,active,출입 타각기
+L-M15X-010,호이스트2,transit,WORK,M15X_SKHynix,FAB,,active,수직이동설비
+L-M15X-011,호이스트3,transit,WORK,M15X_SKHynix,FAB,,active,수직이동설비

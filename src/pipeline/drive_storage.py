@@ -59,6 +59,8 @@ class DriveStorage:
                 q=f"'{self._folder_id}' in parents and trashed = false",
                 fields="nextPageToken, files(id, name, size)",
                 pageToken=page_token, pageSize=1000,
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
             ).execute()
             files.extend(resp.get("files", []))
             page_token = resp.get("nextPageToken")
@@ -110,7 +112,9 @@ class DriveStorage:
 
                 local_dir.mkdir(parents=True, exist_ok=True)
                 try:
-                    request = service.files().get_media(fileId=f["id"])
+                    request = service.files().get_media(
+                        fileId=f["id"], supportsAllDrives=True
+                    )
                     buf = io.BytesIO()
                     downloader = MediaIoBaseDownload(buf, request)
                     done = False
@@ -142,7 +146,9 @@ class DriveStorage:
 
             local_dir.mkdir(parents=True, exist_ok=True)
             try:
-                request = service.files().get_media(fileId=f["id"])
+                request = service.files().get_media(
+                    fileId=f["id"], supportsAllDrives=True
+                )
                 buf = io.BytesIO()
                 downloader = MediaIoBaseDownload(buf, request)
                 done = False
@@ -161,8 +167,8 @@ class DriveStorage:
 
 # ── sector별 폴더 ID 기본값 ──────────────────────────────────────
 _DEFAULT_SECTOR_FOLDERS: dict[str, str] = {
-    "Y1_SKHynix":  "1EqPjWnyCMd4bYdkRRc98OOfev0HKpKeh",
-    "M15X_SKHynix": "1tN4zoifMBMkCbNqZauYwrFynLfICAhWv",
+    "Y1_SKHynix":   "1d50bz14seBR-GyNpo5NWUt2E6di5eWDj",
+    "M15X_SKHynix": "1GvrljfFQNxPMqXb8S-Tsu4hccufYyRjw",
 }
 
 

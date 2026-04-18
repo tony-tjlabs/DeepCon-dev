@@ -48,5 +48,8 @@ data/model/
 data/deep_space/
 data/audit/
 
-# spatial_model 은 locus CSV 등 좌표 파일 포함 → Drive에서 로드
-data/spatial_model/
+# spatial_model: 좌표 CSV/JSON은 정적 파일 → git에 직접 포함
+# (locus_v2.csv, locus.csv, spot_name_map.json — 최대 34KB, 민감정보 없음)
+# data/spatial_model/  ← 제외하지 않음 (전체 커밋)
+data/spatial_model/**/*.xlsx
+data/spatial_model/**/.DS_Store

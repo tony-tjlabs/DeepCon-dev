@@ -1,0 +1,242 @@
+{
+  "FAB": {
+    "locus_id": "L-Y1-020",
+    "locus_token": "work_zone",
+    "note": "FAB 일반(1F 기본)"
+  },
+  "FAB 1F (전체)": {
+    "locus_id": "L-Y1-020",
+    "locus_token": "work_zone",
+    "note": "FAB 1F"
+  },
+  "FAB2F (전체)": {
+    "locus_id": "L-Y1-021",
+    "locus_token": "work_zone",
+    "note": "FAB 2F"
+  },
+  "FAB 3층(전체)": {
+    "locus_id": "L-Y1-022",
+    "locus_token": "work_zone",
+    "note": "FAB 3F"
+  },
+  "FAB 4F (전체)": {
+    "locus_id": "L-Y1-023",
+    "locus_token": "work_zone",
+    "note": "FAB 4F"
+  },
+  "FAB 5F(전체)": {
+    "locus_id": "L-Y1-027",
+    "locus_token": "work_zone",
+    "note": "FAB 5F (신규)"
+  },
+  "FAB6층(전체)": {
+    "locus_id": "L-Y1-028",
+    "locus_token": "work_zone",
+    "note": "FAB 6F (신규)"
+  },
+  "FAB 호이스트": {
+    "locus_id": "L-Y1-029",
+    "locus_token": "transit",
+    "note": "FAB 호이스트 (신규)"
+  },
+  "FAB_클라이머": {
+    "locus_id": "L-Y1-030",
+    "locus_token": "transit",
+    "note": "FAB 클라이머 (신규)"
+  },
+  "FAB_휴게실_F02_1층1번": {
+    "locus_id": "L-Y1-033",
+    "locus_token": "breakroom",
+    "note": "FAB 1F 휴게실 1번"
+  },
+  "FAB_휴게실_F03_1층2번": {
+    "locus_id": "L-Y1-032",
+    "locus_token": "breakroom",
+    "note": "FAB 1F 휴게실 2번"
+  },
+  "CUB": {
+    "locus_id": "L-Y1-040",
+    "locus_token": "work_zone",
+    "note": "CUB 일반"
+  },
+  "CUB 1F (전체)": {
+    "locus_id": "L-Y1-040",
+    "locus_token": "work_zone",
+    "note": "CUB 1F"
+  },
+  "CUB B1F (전체)": {
+    "locus_id": "L-Y1-041",
+    "locus_token": "work_zone",
+    "note": "CUB B1F"
+  },
+  "CUB 클라이머": {
+    "locus_id": "L-Y1-042",
+    "locus_token": "transit",
+    "note": "CUB 클라이머 (신규)"
+  },
+  "WWT": {
+    "locus_id": "L-Y1-051",
+    "locus_token": "work_zone",
+    "note": "WWT 일반"
+  },
+  "WWT 1F (전체)": {
+    "locus_id": "L-Y1-051",
+    "locus_token": "work_zone",
+    "note": "WWT 1F"
+  },
+  "WWT 2F (전체)": {
+    "locus_id": "L-Y1-052",
+    "locus_token": "work_zone",
+    "note": "WWT 2F"
+  },
+  "WWT B1F (전체)": {
+    "locus_id": "L-Y1-050",
+    "locus_token": "work_zone",
+    "note": "WWT B1F"
+  },
+  "WWT 2F 휴게실": {
+    "locus_id": "L-Y1-054",
+    "locus_token": "breakroom",
+    "note": "WWT 2F 휴게실"
+  },
+  "TB08_밀폐": {
+    "locus_id": "L-Y1-055",
+    "locus_token": "confined_space",
+    "note": "WWT B1F TB08 밀폐"
+  },
+  "wwt_b1F_TB02": {
+    "locus_id": "L-Y1-056",
+    "locus_token": "confined_space",
+    "note": "WWT B1F TB02 밀폐"
+  },
+  "TB17_밀폐": {
+    "locus_id": "L-Y1-057",
+    "locus_token": "confined_space",
+    "note": "WWT B1F TB17 밀폐"
+  },
+  "TB09": {
+    "locus_id": "L-Y1-061",
+    "locus_token": "work_zone",
+    "note": "WWT B1F TB09"
+  },
+  "TB07": {
+    "locus_id": "L-Y1-062",
+    "locus_token": "work_zone",
+    "note": "WWT B1F TB07"
+  },
+  "154kV": {
+    "locus_id": "L-Y1-080",
+    "locus_token": "high_voltage",
+    "note": "154kV 건물 일반"
+  },
+  "154kV 1F(전체)": {
+    "locus_id": "L-Y1-080",
+    "locus_token": "high_voltage",
+    "note": "154kV 1F"
+  },
+  "154kV 3F(전체)": {
+    "locus_id": "L-Y1-083",
+    "locus_token": "high_voltage",
+    "note": "154kV 3F (신규)"
+  },
+  "저수조 1F( 전체)": {
+    "locus_id": "L-Y1-082",
+    "locus_token": "work_zone",
+    "note": "저수조 1F"
+  },
+  "비상발전기동": {
+    "locus_id": "L-Y1-026",
+    "locus_token": "mechanical_room",
+    "note": "비상발전기동"
+  },
+  "공사현장": {
+    "locus_id": "L-Y1-070",
+    "locus_token": "outdoor_work",
+    "note": "야외 공사현장"
+  },
+  "지원 1_3BL": {
+    "locus_id": "L-Y1-024",
+    "locus_token": "outdoor_work",
+    "note": "지원 1-3BL"
+  },
+  "지원 4BL": {
+    "locus_id": "L-Y1-025",
+    "locus_token": "outdoor_work",
+    "note": "지원 4BL"
+  },
+  "본진 타각기 입구": {
+    "locus_id": "L-Y1-001",
+    "locus_token": "timeclock",
+    "note": "본진 타각기 입구"
+  },
+  "본진 타각기 출구": {
+    "locus_id": "L-Y1-002",
+    "locus_token": "timeclock",
+    "note": "본진 타각기 출구"
+  },
+  "지원_타각기": {
+    "locus_id": "L-Y1-006",
+    "locus_token": "timeclock",
+    "note": "지원(전진) 타각기"
+  },
+  "본진 타각기 앞 보호구 걸이대": {
+    "locus_id": "L-Y1-001",
+    "locus_token": "timeclock",
+    "note": "타각기 입구 PPE 걸이대"
+  },
+  "본진 B동앞 보호구 걸이대": {
+    "locus_id": "L-Y1-001",
+    "locus_token": "timeclock",
+    "note": "본진 B동앞 PPE 걸이대"
+  },
+  "본진": {
+    "locus_id": "L-Y1-072",
+    "locus_token": "office",
+    "note": "본진 사무실/건물"
+  },
+  "본진 주차장": {
+    "locus_id": "L-Y1-100",
+    "locus_token": "parking_lot",
+    "note": "주차장"
+  },
+  "전진 주차장": {
+    "locus_id": "L-Y1-100",
+    "locus_token": "parking_lot",
+    "note": "전진 주차장"
+  },
+  "전진": {
+    "locus_id": "L-Y1-094",
+    "locus_token": "office",
+    "note": "전진사무실"
+  },
+  "안전교육장": {
+    "locus_id": "L-Y1-073",
+    "locus_token": "facility",
+    "note": "안전교육장 (신규)"
+  },
+  "휴게실 (본진내부 남자휴계실)": {
+    "locus_id": "L-Y1-099",
+    "locus_token": "breakroom",
+    "note": "본진 내부 휴게실"
+  },
+  "휴게실 (154kV 변전소 )": {
+    "locus_id": "L-Y1-098",
+    "locus_token": "breakroom",
+    "note": "154kV 변전소 휴게실"
+  },
+  "휴게실 (전진 사무실 뒷편)": {
+    "locus_id": "L-Y1-095",
+    "locus_token": "breakroom",
+    "note": "전진 뒷편 휴게실"
+  },
+  "흡연장 (타각기 근처)": {
+    "locus_id": "L-Y1-091",
+    "locus_token": "smoking_area",
+    "note": "타각기 근처 흡연장"
+  },
+  "흡연장 (전진사무실)": {
+    "locus_id": "L-Y1-093",
+    "locus_token": "smoking_area",
+    "note": "전진사무실 흡연장"
+  }
+}

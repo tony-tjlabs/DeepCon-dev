@@ -1,0 +1,57 @@
+{
+  "FAB 5F (전체)": {
+    "locus_id": "L-M15X-001",
+    "locus_token": "work_zone",
+    "note": "FAB 5F 작업구역"
+  },
+  "FAB 6F (전체)": {
+    "locus_id": "L-M15X-002",
+    "locus_token": "work_zone",
+    "note": "FAB 6F 작업구역"
+  },
+  "FAB 7F (전체)": {
+    "locus_id": "L-M15X-003",
+    "locus_token": "work_zone",
+    "note": "FAB 7F 작업구역"
+  },
+  "FAB RF (전체)": {
+    "locus_id": "L-M15X-004",
+    "locus_token": "work_zone",
+    "note": "FAB RF 작업구역"
+  },
+  "FAB 건너 화장실": {
+    "locus_id": "L-M15X-005",
+    "locus_token": "restroom",
+    "note": "FAB 건너편 화장실"
+  },
+  "FAB 건너 휴게실": {
+    "locus_id": "L-M15X-006",
+    "locus_token": "breakroom",
+    "note": "FAB 건너편 휴게실"
+  },
+  "FAB 건너 흡연실": {
+    "locus_id": "L-M15X-007",
+    "locus_token": "smoking_area",
+    "note": "FAB 건너편 흡연실"
+  },
+  "공사현장": {
+    "locus_id": "L-M15X-008",
+    "locus_token": "outdoor_work",
+    "note": "외부 공사현장"
+  },
+  "타각기 주변": {
+    "locus_id": "L-M15X-009",
+    "locus_token": "timeclock",
+    "note": "타각기(출입) 주변"
+  },
+  "호이스트2 주변": {
+    "locus_id": "L-M15X-010",
+    "locus_token": "transit",
+    "note": "호이스트2 수직이동"
+  },
+  "호이스트3 주변": {
+    "locus_id": "L-M15X-011",
+    "locus_token": "transit",
+    "note": "호이스트3 수직이동"
+  }
+}
