@@ -690,7 +690,8 @@ def _render_individual_safety_subtab(
     n_critical = int((filt["risk_level"] == "🔴 심각").sum())
     avg_cre = pd.to_numeric(filt["cre"], errors="coerce").mean() or 0
     avg_sii = pd.to_numeric(filt["sii"], errors="coerce").mean() or 0
-    n_helmet = int(filt["helmet_abandoned"].fillna(False).sum())
+    _helmet_col = filt.get("helmet_abandoned", pd.Series(False, index=filt.index))
+    n_helmet = int(_helmet_col.fillna(False).sum())
 
     k1, k2, k3, k4 = st.columns(4)
     with k1:
@@ -736,7 +737,7 @@ def _render_individual_safety_subtab(
     rank_df["고압(분)"] = pd.to_numeric(rank_df["high_voltage_minutes"], errors="coerce").fillna(0).round(0).astype(int)
     rank_df["고립 비율"] = (pd.to_numeric(rank_df["alone_ratio"], errors="coerce").fillna(0) * 100).round(1)
     rank_df["피로도"] = pd.to_numeric(rank_df.get("fatigue_score", 0), errors="coerce").round(3)
-    rank_df["헬멧방치"] = rank_df["helmet_abandoned"].fillna(False).map(
+    rank_df["헬멧방치"] = rank_df.get("helmet_abandoned", pd.Series(False, index=rank_df.index)).fillna(False).map(
         lambda v: "⚠" if bool(v) else "—"
     )
 
@@ -940,16 +941,36 @@ def render_safety_tab(sector_id: str) -> None:
     ])
 
     with t1:
-        _render_daily_safety(sector_id, date_str, shift_filter)
+        try:
+            _render_daily_safety(sector_id, date_str, shift_filter)
+        except Exception as e:
+            st.error(f"일별 안전 탭 오류: {e}")
+            logger.exception("safety t1 error")
 
     with t2:
-        _render_company_safety(sector_id, dates_asc)
+        try:
+            _render_company_safety(sector_id, dates_asc)
+        except Exception as e:
+            st.error(f"업체별 안전 탭 오류: {e}")
+            logger.exception("safety t2 error")
 
     with t3:
-        _render_space_safety(sector_id)
+        try:
+            _render_space_safety(sector_id)
+        except Exception as e:
+            st.error(f"공간별 혼잡도 탭 오류: {e}")
+            logger.exception("safety t3 error")
 
     with t4:
-        _render_period_safety(sector_id)
+        try:
+            _render_period_safety(sector_id)
+        except Exception as e:
+            st.error(f"기간별 안전 탭 오류: {e}")
+            logger.exception("safety t4 error")
 
     with t5:
-        _render_individual_safety_subtab(sector_id, date_str, shift_filter)
+        try:
+            _render_individual_safety_subtab(sector_id, date_str, shift_filter)
+        except Exception as e:
+            st.error(f"개인별 안전 탭 오류: {e}")
+            logger.exception("safety t5 error")

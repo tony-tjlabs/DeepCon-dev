@@ -1119,4 +1119,6 @@ def handle_schema_mismatch(exc, sector_id: str, date_str: str) -> None:
             f"- 파일: `{file}`\n"
             f"- 기대 버전: v{expected} / 현재: {found_label}"
         )
-    st.stop()
+    # ★ st.stop() 제거 — StopException(BaseException)이 _safe_render의
+    #   except Exception을 우회해 앱 전체를 중단시킴.
+    #   모든 호출부에 return이 있으므로 st.stop() 불필요.
