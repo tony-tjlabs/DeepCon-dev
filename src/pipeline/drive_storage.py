@@ -221,6 +221,89 @@ class DriveStorage:
         logger.info(f"Drive sync: {new_count} new, {skip_count} skipped / {len(files)} total")
         return new_count
 
+    def get_drive_file_size(self, sector_id: str, date_str: str, filename: str) -> int | None:
+        """
+        Drive에서 특정 파일의 크기(bytes)를 반환.
+
+        Args:
+            filename: 예) "journey.parquet", "journey_slim.parquet"
+
+        Returns:
+            파일 크기(bytes), 없으면 None
+        """
+        drive_name = f"{sector_id}_{date_str}_{filename}"
+        files = self.list_files()
+        target = next((f for f in files if f["name"] == drive_name), None)
+        if target is None:
+            return None
+        try:
+            return int(target.get("size", 0))
+        except (ValueError, TypeError):
+            return None
+
+    def ensure_journey_full(
+        self,
+        sector_id: str,
+        date_str: str,
+        local_processed_dir: "Path",
+        progress_callback=None,
+    ) -> tuple[bool, str]:
+        """
+        특정 날짜의 journey.parquet(전체 데이터)를 온디맨드로 다운로드.
+
+        - 이미 로컬에 있으면 즉시 (True, "already_exists") 반환
+        - Drive에 파일 없으면 (False, "not_found") 반환
+        - 다운로드 성공 시 (True, "downloaded") 반환
+        - 실패 시 (False, "error:...") 반환
+
+        Args:
+            sector_id:           섹터 ID (예: Y1_SKHynix)
+            date_str:            날짜 문자열 (YYYYMMDD)
+            local_processed_dir: 로컬 processed 루트 경로 (cfg.PROCESSED_DIR)
+            progress_callback:   진행률 콜백 fn(progress: float, status: str) — 선택
+        """
+        local_path = local_processed_dir / sector_id / date_str / "journey.parquet"
+
+        if local_path.exists():
+            return True, "already_exists"
+
+        drive_name = f"{sector_id}_{date_str}_journey.parquet"
+        files      = self.list_files()
+        target     = next((f for f in files if f["name"] == drive_name), None)
+
+        if target is None:
+            logger.info(f"Drive에 {drive_name} 없음")
+            return False, "not_found"
+
+        drive_size = int(target.get("size", 0))
+
+        try:
+            from googleapiclient.http import MediaIoBaseDownload
+            service = self._get_service()
+            request = service.files().get_media(
+                fileId=target["id"], supportsAllDrives=True
+            )
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            buf = io.BytesIO()
+            downloader = MediaIoBaseDownload(buf, request, chunksize=4 * 1024 * 1024)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+                if progress_callback and status:
+                    pct = status.progress() if hasattr(status, "progress") else 0
+                    downloaded_mb = round(drive_size * pct / 1024 / 1024, 1)
+                    total_mb     = round(drive_size / 1024 / 1024, 1)
+                    progress_callback(pct, f"{downloaded_mb} / {total_mb} MB")
+
+            buf.seek(0)
+            local_path.write_bytes(buf.read())
+            size_mb = round(local_path.stat().st_size / 1024 / 1024, 1)
+            logger.info(f"journey 전체 다운로드 완료: {drive_name} ({size_mb}MB)")
+            return True, "downloaded"
+        except Exception as e:
+            logger.warning(f"journey 전체 다운로드 실패 ({drive_name}): {e}")
+            return False, f"error:{e}"
+
     def ensure_journey_slim(self, sector_id: str, date_str: str, local_processed_dir: "Path") -> bool:
         """
         특정 날짜의 journey_slim.parquet 를 온디맨드로 다운로드.

@@ -102,10 +102,11 @@ def _render_worker_detail(sector_id: str) -> None:
         st.error("해당 날짜의 worker.parquet가 없습니다.")
         return
 
+    import config as _cfg
+
     # ── journey_slim 온디맨드 다운로드 (정합성 탭 KPI 활성화) ──────────
     # journey.parquet도 없고 slim도 없을 때, Cloud 환경이면 Drive에서 받아옴
     if not journey_path.exists() and not slim_path.exists():
-        import config as _cfg
         if _cfg.CLOUD_MODE:
             with st.spinner(
                 f"☁️ 정합성 데이터 다운로드 중… ({date_str} · 약 10~15초)"
@@ -119,6 +120,94 @@ def _render_worker_detail(sector_id: str) -> None:
                         )
                 except Exception as _e:
                     logger.warning(f"정합성 journey_slim 다운로드 실패: {_e}")
+
+    # ── Cloud: full journey 온디맨드 다운로드 UI ──────────────────────
+    # journey.parquet 없을 때(= slim만 있거나 아무것도 없을 때) 다운로드 배너 표시.
+    # 사용자가 버튼을 눌러야 다운로드 시작 (대용량 파일이므로 자동 X).
+    if not journey_path.exists() and _cfg.CLOUD_MODE:
+        _dl_key = f"_journey_dl_{sector_id}_{date_str}"
+
+        # 진행 중이 아닐 때만 배너 표시
+        if not st.session_state.get(f"{_dl_key}_done"):
+            try:
+                from src.pipeline.drive_storage import init_drive_storage_from_secrets
+                _drive_info = init_drive_storage_from_secrets(sector_id)
+                _file_size_bytes = (
+                    _drive_info.get_drive_file_size(sector_id, date_str, "journey.parquet")
+                    if _drive_info else None
+                )
+            except Exception:
+                _drive_info = None
+                _file_size_bytes = None
+
+            _size_label = (
+                f"{round(_file_size_bytes / 1024 / 1024, 0):.0f} MB"
+                if _file_size_bytes else "알 수 없음"
+            )
+            _est_sec = max(30, round((_file_size_bytes or 30_000_000) / 1_000_000 * 1.2))
+            _est_label = f"약 {_est_sec}초" if _est_sec < 120 else f"약 {_est_sec // 60}분"
+
+            with st.container():
+                st.info(
+                    f"☁️ **전체 데이터({_size_label})를 다운로드하면 "
+                    f"Raw BLE · 신호 품질 · 보정 비교 탭을 모두 사용할 수 있습니다.** "
+                    f"예상 소요 시간: **{_est_label}** · 다운로드 후 자동 새로 고침됩니다.",
+                    icon="📥",
+                )
+
+                _btn_col, _skip_col = st.columns([2, 5])
+                with _btn_col:
+                    _do_download = st.button(
+                        f"📥 전체 데이터 다운로드 ({_size_label})",
+                        key=f"{_dl_key}_btn",
+                        type="primary",
+                        use_container_width=True,
+                    )
+
+                if _do_download and _drive_info:
+                    _status_box = st.status(
+                        f"☁️ journey.parquet 다운로드 중… ({date_str})",
+                        expanded=True,
+                    )
+                    with _status_box:
+                        _prog_bar  = st.progress(0.0)
+                        _prog_text = st.empty()
+
+                        def _on_progress(pct: float, label: str) -> None:
+                            _prog_bar.progress(min(pct, 1.0))
+                            _prog_text.markdown(
+                                f"<span style='color:#9AB5D4;font-size:0.85rem;'>"
+                                f"다운로드 중: **{label}**</span>",
+                                unsafe_allow_html=True,
+                            )
+
+                        try:
+                            _ok, _reason = _drive_info.ensure_journey_full(
+                                sector_id, date_str, _cfg.PROCESSED_DIR,
+                                progress_callback=_on_progress,
+                            )
+                            if _ok:
+                                _prog_bar.progress(1.0)
+                                _prog_text.empty()
+                                _status_box.update(
+                                    label="✅ 다운로드 완료! 데이터를 새로 로드합니다…",
+                                    state="complete",
+                                    expanded=False,
+                                )
+                                st.session_state[f"{_dl_key}_done"] = True
+                                st.rerun()
+                            else:
+                                _status_box.update(
+                                    label=f"❌ 다운로드 실패: {_reason}",
+                                    state="error",
+                                    expanded=True,
+                                )
+                        except Exception as _e:
+                            _status_box.update(
+                                label=f"❌ 오류: {_e}",
+                                state="error",
+                                expanded=True,
+                            )
 
     worker_df = _load_worker(sector_id, date_str, str(worker_path))
     if worker_df.empty:
