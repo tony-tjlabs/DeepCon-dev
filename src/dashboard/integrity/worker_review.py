@@ -110,10 +110,9 @@ def _render_worker_detail(sector_id: str) -> None:
     # CLOUD_MODE에서는 모든 journey 로딩을 차단하고 로컬 전용 안내만 표시.
     if _cfg.CLOUD_MODE:
         st.info(
-            "☁️ **Raw BLE · 신호 품질 · 보정 Journey 탭은 로컬 전용입니다.**  \n"
+            "🖥️ **Raw BLE · 신호 품질 · 보정 Journey 탭은 로컬 전용입니다.**  \n"
             "`journey.parquet` (2.8 GB/일)은 Cloud 메모리 한도를 초과합니다.  \n"
-            "로컬 환경에서 실행하면 전체 기능을 사용할 수 있습니다.",
-            icon="🖥️",
+            "로컬 환경에서 실행하면 전체 기능을 사용할 수 있습니다."
         )
 
     worker_df = _load_worker(sector_id, date_str, str(worker_path))
