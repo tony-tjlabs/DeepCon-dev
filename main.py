@@ -225,18 +225,17 @@ def render_sidebar() -> tuple[str, str]:
             unsafe_allow_html=True,
         )
 
-        # ★ 인사이트 & 예측 / 시스템 관리: 관리자만 표시
-        #   (데이터 정합성은 모든 계정 공개 — 현장 고객사도 데이터 품질 직접 확인 가능)
+        # ★ 인사이트 & 예측 / 데이터 정합성 / 시스템 관리: 관리자만 표시
         base_pages = [
             "🏠 현장 개요",
             "⏱ 작업시간 분석",
             "🏭 생산성 분석",
             "🦺 안전성 분석",
             "📅 기간 분석",
-            "🔬 데이터 정합성",
         ]
         if is_admin():
             pages = base_pages + [
+                "🔬 데이터 정합성",
                 "🧠 인사이트 & 예측",
                 "⚙️ 시스템 관리",
             ]
@@ -479,9 +478,8 @@ def main():
         _safe_render("기간 분석", lambda: __import__(
             "src.dashboard.period_tab", fromlist=["render_period_tab"]
         ).render_period_tab(sector_id))
-    elif "데이터 정합성" in page:
-        # 데이터 정합성은 전 계정 접근 허용 (2026-04-18~)
-        # M3-A 분해 이후 신규 경로로 직접 import (shim 우회)
+    elif "데이터 정합성" in page and is_admin():
+        # 데이터 정합성은 관리자 전용 (journey.parquet 메모리 한도로 Cloud 고객 계정 차단)
         _safe_render("데이터 정합성", lambda: __import__(
             "src.dashboard.integrity", fromlist=["render_integrity_tab"]
         ).render_integrity_tab(sector_id))
