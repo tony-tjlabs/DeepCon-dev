@@ -1953,7 +1953,11 @@ def _render_locus_map(user_jdf: pd.DataFrame, locus_meta: pd.DataFrame) -> None:
         {True: "x", False: "circle"}
     ).fillna("circle").tolist()
 
-    act_col = worker_path.get("activity_level", pd.Series(dtype=str)).fillna("")
+    act_col = (
+        worker_path["activity_level"].fillna("")
+        if "activity_level" in worker_path.columns
+        else pd.Series([""] * len(worker_path), dtype=str)
+    )
     gap_col = worker_path.get("is_gap_filled", pd.Series([False]*len(worker_path))).fillna(False)
     locus_meta_name_col = worker_path.get("locus_meta_name", worker_path.get("locus_name", pd.Series(dtype=str))).fillna("")
 
